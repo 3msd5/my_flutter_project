@@ -144,14 +144,8 @@ class _LoginPageState extends State<LoginPage> {
                       ? Center(child: CircularProgressIndicator())
                       : ElevatedButton(
                     onPressed: _login, // Giriş yap butonuna tıklandığında _login() fonksiyonu çalışacak
-                    style: ElevatedButton.styleFrom(
-                      primary: Colors.blue, // Arka plan rengi (primary)
-                      onPrimary: Colors.white, // Buton metninin rengi (onPrimary)
-                      padding: EdgeInsets.symmetric(vertical: 16), // Butonun içindeki dikey boşluk
-                    ),
                     child: Text('Log In'),
                   ),
-
                   // Kayıt ol butonu
                   TextButton(
                     onPressed: () {
