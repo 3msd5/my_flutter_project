@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'HomePage.dart'; // Kayıt başarılıysa gidilecek sayfa
+import 'LoginPage.dart'; // Giriş sayfasına yönlendirme
 
 class SignUpPage extends StatefulWidget {
   @override
@@ -10,11 +10,11 @@ class SignUpPage extends StatefulWidget {
 class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   String _errorMessage = '';
 
+  // Form doğrulama
   bool _validateInputs() {
     return _formKey.currentState?.validate() ?? false;
   }
@@ -25,6 +25,7 @@ class _SignUpPageState extends State<SignUpPage> {
       _errorMessage = '';
     });
 
+    // Giriş yapılmadan önce inputları doğrula
     if (!_validateInputs()) {
       setState(() {
         _isLoading = false;
@@ -33,27 +34,28 @@ class _SignUpPageState extends State<SignUpPage> {
     }
 
     try {
-      if (_passwordController.text != _confirmPasswordController.text) {
-        setState(() {
-          _errorMessage = 'Passwords do not match';
-          _isLoading = false;
-        });
-        return;
-      }
-
+      // Firebase Authentication ile kullanıcı kaydı
       await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text,
         password: _passwordController.text,
       );
 
-      // Kayıt başarılıysa, HomePage'e yönlendir
+      // Kayıt işlemi başarılıysa, giriş sayfasına yönlendir
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HomePage()),
+        MaterialPageRoute(builder: (context) => LoginPage()),
       );
+
+      // Başarılı kayıttan sonra formu temizle
+      _emailController.clear();
+      _passwordController.clear();
     } on FirebaseAuthException catch (e) {
+      // Firebase Auth hatası yönetimi
       setState(() {
         _errorMessage = e.message ?? 'An error occurred';
+      });
+    } finally {
+      setState(() {
         _isLoading = false;
       });
     }
@@ -71,6 +73,15 @@ class _SignUpPageState extends State<SignUpPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Görseli ekleyin
+              Center(
+                child: Image.asset(
+                  'assets/images/moviescoutlogo.png', // Görselin yolu
+                  height: 150, // Yükseklik isteğe göre ayarlanabilir
+                  width: 150,  // Genişlik isteğe göre ayarlanabilir
+                ),
+              ),
+              SizedBox(height: 16),
               // E-posta input
               TextFormField(
                 controller: _emailController,
@@ -109,31 +120,23 @@ class _SignUpPageState extends State<SignUpPage> {
                 },
               ),
               SizedBox(height: 16),
-              // Şifre onay input
-              TextFormField(
-                controller: _confirmPasswordController,
-                decoration: InputDecoration(
-                  labelText: 'Confirm Password',
-                  border: OutlineInputBorder(),
-                ),
-                obscureText: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please confirm your password';
-                  }
-                  if (value != _passwordController.text) {
-                    return 'Passwords do not match';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 16),
               // Kayıt ol butonu
               _isLoading
                   ? Center(child: CircularProgressIndicator())
                   : ElevatedButton(
-                onPressed: _signUp,
+                onPressed: _signUp, // Kayıt ol butonuna tıklandığında _signUp() fonksiyonu çalışacak
                 child: Text('Sign Up'),
+              ),
+              // Zaten hesabınız var mı? linki
+              TextButton(
+                onPressed: () {
+                  // Giriş sayfasına yönlendirme
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => LoginPage()),
+                  );
+                },
+                child: Text("Already have an account? Log in"),
               ),
               // Hata mesajı
               if (_errorMessage.isNotEmpty) ...[

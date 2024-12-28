@@ -47,6 +47,15 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Görseli ekleyin
+            Center(
+              child: Image.asset(
+                'assets/images/moviescoutlogo.png', // Görselin yolu
+                height: 150, // Yükseklik isteğe göre ayarlanabilir
+                width: 150,  // Genişlik isteğe göre ayarlanabilir
+              ),
+            ),
+            SizedBox(height: 16),
             // E-posta input
             TextFormField(
               controller: _emailController,
