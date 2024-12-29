@@ -144,19 +144,24 @@ class ApiService {
   }
 
   // Film detaylarını ve oyuncuları al
-  Future<Map<String, dynamic>> fetchMovieDetailsWithCredits(int movieId) async {
+  Future<Map<String, dynamic>> fetchMovieDetailsWithCredits(int movieId, {bool isMovie = true}) async {
+    final type = isMovie ? 'movie' : 'tv';
     final response = await http.get(
       Uri.parse(
-        'https://api.themoviedb.org/3/movie/$movieId?api_key=$apiKey&language=en-US&append_to_response=credits',
+        'https://api.themoviedb.org/3/$type/$movieId?api_key=$apiKey&language=en-US&append_to_response=credits',
       ),
     );
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       // Film verileri - use original_title as fallback
-      data['title'] = data['title'] ?? data['original_title'] ?? 'Unknown Movie';
+      data['title'] = isMovie 
+          ? (data['title'] ?? data['original_title'] ?? 'Unknown Movie')
+          : (data['name'] ?? data['original_name'] ?? 'Unknown TV Show');
       data['poster_path'] ??= '/placeholder.png';
-      data['release_date'] ??= 'Unknown Release Date';
+      data['release_date'] = isMovie 
+          ? (data['release_date'] ?? 'Unknown Release Date')
+          : (data['first_air_date'] ?? 'Unknown Release Date');
       data['overview'] ??= 'No overview available';
       data['status'] ??= 'Unknown Status';
       data['original_language'] ??= 'Unknown Language';

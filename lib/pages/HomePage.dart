@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:filmdeneme/services/api_service.dart';
 import 'package:filmdeneme/pages/profilePage.dart';
 import 'package:filmdeneme/pages/loginPage.dart';
 import 'package:filmdeneme/pages/DetailsPage.dart';
+import 'package:filmdeneme/pages/SearchPage.dart';
 import 'package:filmdeneme/theme/app_theme.dart';
 import 'package:filmdeneme/widgets/movie_card.dart';
 import 'package:filmdeneme/widgets/custom_toggle_buttons.dart';
@@ -109,7 +111,10 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              // TODO: Implement search functionality
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SearchPage()),
+              );
             },
           ),
         ],
@@ -118,39 +123,65 @@ class _HomePageState extends State<HomePage> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            UserAccountsDrawerHeader(
-              accountName: Text(isLoggedIn ? 'Kullanıcı Adı' : 'Misafir'),
-              accountEmail: Text(isLoggedIn ? 'email@example.com' : 'Giriş Yap'),
-              currentAccountPicture: CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person, color: Colors.blue),
-              ),
-            ),
-            ListTile(
-              title: Text(isLoggedIn ? 'Bilgilerim' : 'Giriş Yap'),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => isLoggedIn ? ProfilePage() : LoginPage(),
-                  ),
+            StreamBuilder<User?>(
+              stream: FirebaseAuth.instance.authStateChanges(),
+              builder: (context, snapshot) {
+                final user = snapshot.data;
+                final isLoggedIn = user != null;
+
+                return Column(
+                  children: [
+                    UserAccountsDrawerHeader(
+                      accountName: Text(
+                        isLoggedIn ? (user.displayName ?? 'User') : 'Guest',
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                      accountEmail: Text(
+                        isLoggedIn ? user.email! : 'Sign in to access more features',
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      currentAccountPicture: CircleAvatar(
+                        backgroundColor: Colors.white,
+                        backgroundImage: isLoggedIn && user.photoURL != null
+                            ? NetworkImage(user.photoURL!)
+                            : null,
+                        child: isLoggedIn && user.photoURL == null
+                            ? const Icon(Icons.person, color: Colors.blue, size: 40)
+                            : null,
+                      ),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.person_outline),
+                      title: Text(isLoggedIn ? 'My Profile' : 'Sign In'),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => isLoggedIn ? ProfilePage() : LoginPage(),
+                          ),
+                        );
+                      },
+                    ),
+                    if (isLoggedIn) ...[
+                      ListTile(
+                        leading: const Icon(Icons.favorite_border),
+                        title: const Text('My Favorites'),
+                        onTap: () {
+                          // Favorites page navigation
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.list_alt),
+                        title: const Text('Watch List'),
+                        onTap: () {
+                          // Watch list page navigation
+                        },
+                      ),
+                    ],
+                  ],
                 );
               },
             ),
-            if (isLoggedIn) ...[
-              ListTile(
-                title: Text('Favorilerim'),
-                onTap: () {
-                  // Favorilerim sayfasına yönlendirme
-                },
-              ),
-              ListTile(
-                title: Text('İzleme Listem'),
-                onTap: () {
-                  // İzleme Listem sayfasına yönlendirme
-                },
-              ),
-            ]
           ],
         ),
       ),
@@ -202,7 +233,6 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-
           // Content Grid
           Expanded(
             child: isLoadingDaily || isLoadingWeekly

@@ -86,9 +86,16 @@ class MovieCard extends StatelessWidget {
                       Text(
                         title,
                         style: const TextStyle(
-                          color: AppTheme.textColor,
+                          color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
+                          shadows: [
+                            Shadow(
+                              offset: Offset(0, 1),
+                              blurRadius: 2,
+                              color: Colors.black45,
+                            ),
+                          ],
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,

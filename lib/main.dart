@@ -45,13 +45,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'MovieScout',
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(), // Oturum durumu değişikliklerini dinliyoruz
-        builder: (context, snapshot) {
+      home: FutureBuilder(
+        future: FirebaseAuth.instance.authStateChanges().first,
+        builder: (context, AsyncSnapshot<User?> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            // Firebase başlatılıyor, bekle
             return const Scaffold(
               backgroundColor: AppTheme.backgroundColor,
               body: Center(
@@ -63,7 +62,6 @@ class MyApp extends StatelessWidget {
           }
 
           if (snapshot.hasError) {
-            // Hata varsa ekrana yazdır
             return Scaffold(
               backgroundColor: AppTheme.backgroundColor,
               body: Center(
@@ -75,9 +73,8 @@ class MyApp extends StatelessWidget {
             );
           }
 
-          // snapshot.data == null ise kullanıcı giriş yapmamış demek
-          return snapshot.data == null ? LoginPage() : HomePage();
-
+          // Default to LoginPage unless user is already logged in
+          return LoginPage();
         },
       ),
     );
