@@ -168,6 +168,11 @@ class ApiService {
       data['vote_average'] ??= 0.0;
       data['runtime'] ??= 0;
 
+      // Get director from crew
+      final crew = data['credits']['crew'] ?? [];
+      final directors = crew.where((member) => member['job'] == 'Director').toList();
+      data['director'] = directors.isNotEmpty ? directors[0]['name'] : 'Unknown';
+
       // Oyuncu bilgileri
       final cast = data['credits']['cast'] ?? [];
       for (var actor in cast) {
@@ -176,6 +181,12 @@ class ApiService {
         actor['profile_path'] ??= '/placeholder.png';
       }
       data['cast'] = cast;
+
+      // For TV shows, also check for created by
+      if (!isMovie && data['created_by'] != null && data['created_by'].isNotEmpty) {
+        final creators = data['created_by'].map((creator) => creator['name']).join(', ');
+        data['director'] = creators;
+      }
 
       return data;
     } else {
