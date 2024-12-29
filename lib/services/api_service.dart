@@ -14,11 +14,17 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body)['results'];
-      // Eksik verileri kontrol et ve varsayılan değer ata
+      // Don't set default values for title/name as they come from the API
       for (var item in data) {
-        item['title'] ??= 'Unknown';
-        item['name'] ??= 'Unknown';
-        item['poster_path'] ??= '/placeholder.png'; // Placeholder image
+        // For movies, use 'title' field
+        if (type == 'movie' && !item.containsKey('title')) {
+          item['title'] = item['original_title'] ?? 'Unknown';
+        }
+        // For TV shows, use 'name' field
+        if (type == 'tv' && !item.containsKey('name')) {
+          item['name'] = item['original_name'] ?? 'Unknown';
+        }
+        item['poster_path'] ??= '/placeholder.png';
       }
       return data;
     } else {
@@ -56,9 +62,9 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      // Eksik verileri kontrol et ve varsayılan değer ata
-      data['title'] ??= 'Unknown Movie';
-      data['poster_path'] ??= '/placeholder.png'; // Placeholder image
+      // Use original_title as fallback before using default value
+      data['title'] = data['title'] ?? data['original_title'] ?? 'Unknown Movie';
+      data['poster_path'] ??= '/placeholder.png';
       data['release_date'] ??= 'Unknown Release Date';
       data['overview'] ??= 'No overview available';
       data['status'] ??= 'Unknown Status';
@@ -81,9 +87,9 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      // Eksik verileri kontrol et ve varsayılan değer ata
-      data['name'] ??= 'Unknown TV Show';
-      data['poster_path'] ??= '/placeholder.png'; // Placeholder image
+      // Use original_name as fallback before using default value
+      data['name'] = data['name'] ?? data['original_name'] ?? 'Unknown TV Show';
+      data['poster_path'] ??= '/placeholder.png';
       data['first_air_date'] ??= 'Unknown First Air Date';
       data['overview'] ??= 'No overview available';
       data['status'] ??= 'Unknown Status';
@@ -105,6 +111,11 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body)['results'];
+      // Process search results to ensure titles are present
+      for (var item in data) {
+        item['title'] = item['title'] ?? item['original_title'] ?? 'Unknown';
+        item['poster_path'] ??= '/placeholder.png';
+      }
       return data;
     } else {
       throw Exception('Failed to search movies');
@@ -121,6 +132,11 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body)['results'];
+      // Process search results to ensure names are present
+      for (var item in data) {
+        item['name'] = item['name'] ?? item['original_name'] ?? 'Unknown';
+        item['poster_path'] ??= '/placeholder.png';
+      }
       return data;
     } else {
       throw Exception('Failed to search TV shows');
@@ -137,9 +153,9 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      // Film verileri
-      data['title'] ??= 'Unknown Movie';
-      data['poster_path'] ??= '/placeholder.png'; // Placeholder image
+      // Film verileri - use original_title as fallback
+      data['title'] = data['title'] ?? data['original_title'] ?? 'Unknown Movie';
+      data['poster_path'] ??= '/placeholder.png';
       data['release_date'] ??= 'Unknown Release Date';
       data['overview'] ??= 'No overview available';
       data['status'] ??= 'Unknown Status';
@@ -152,7 +168,7 @@ class ApiService {
       for (var actor in cast) {
         actor['name'] ??= 'Unknown Actor';
         actor['character'] ??= 'Unknown Character';
-        actor['profile_path'] ??= '/placeholder.png'; // Placeholder image for actor
+        actor['profile_path'] ??= '/placeholder.png';
       }
       data['cast'] = cast;
 
@@ -172,9 +188,9 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      // Dizi verileri
-      data['name'] ??= 'Unknown TV Show';
-      data['poster_path'] ??= '/placeholder.png'; // Placeholder image
+      // Dizi verileri - use original_name as fallback
+      data['name'] = data['name'] ?? data['original_name'] ?? 'Unknown TV Show';
+      data['poster_path'] ??= '/placeholder.png';
       data['first_air_date'] ??= 'Unknown First Air Date';
       data['overview'] ??= 'No overview available';
       data['status'] ??= 'Unknown Status';
@@ -186,7 +202,7 @@ class ApiService {
       for (var actor in cast) {
         actor['name'] ??= 'Unknown Actor';
         actor['character'] ??= 'Unknown Character';
-        actor['profile_path'] ??= '/placeholder.png'; // Placeholder image for actor
+        actor['profile_path'] ??= '/placeholder.png';
       }
       data['cast'] = cast;
 
