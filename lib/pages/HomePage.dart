@@ -3,8 +3,12 @@ import 'package:filmdeneme/services/api_service.dart';
 import 'package:filmdeneme/pages/profilePage.dart';
 import 'package:filmdeneme/pages/loginPage.dart';
 import 'package:filmdeneme/pages/DetailsPage.dart';
+import 'package:filmdeneme/theme/app_theme.dart';
+import 'package:filmdeneme/widgets/movie_card.dart';
+import 'package:filmdeneme/widgets/custom_toggle_buttons.dart';
 
 class HomePage extends StatefulWidget {
+  const HomePage({Key? key}) : super(key: key);
   @override
   _HomePageState createState() => _HomePageState();
 }
@@ -99,7 +103,17 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Trending Movies and TV Shows')),
+      appBar: AppBar(
+        title: const Text('MovieScout'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              // TODO: Implement search functionality
+            },
+          ),
+        ],
+      ),
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
@@ -142,131 +156,101 @@ class _HomePageState extends State<HomePage> {
       ),
       body: Column(
         children: [
-          // Select Movie or TV Show
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    isMovieSelected = true; // Select Movies
-                  });
-                  if (showDaily) {
-                    fetchDailyMovies();
-                  } else {
-                    fetchWeeklyMovies();
-                  }
-                },
-                child: Text('Filmler'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    isMovieSelected = false; // Select TV Shows
-                  });
-                  if (showDaily) {
-                    fetchDailyTvShows();
-                  } else {
-                    fetchWeeklyTvShows();
-                  }
-                },
-                child: Text('Diziler'),
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Column(
+              children: [
+                // Content Type Toggle (Movies/TV Shows)
+                Center(
+                  child: CustomToggleButtons(
+                    options: const ['Movies', 'TV Shows'],
+                    selectedIndex: isMovieSelected ? 0 : 1,
+                    onSelected: (index) {
+                      setState(() {
+                        isMovieSelected = index == 0;
+                      });
+                      if (showDaily) {
+                        isMovieSelected ? fetchDailyMovies() : fetchDailyTvShows();
+                      } else {
+                        isMovieSelected ? fetchWeeklyMovies() : fetchWeeklyTvShows();
+                      }
+                    },
+                    leftIcon: Icons.movie_outlined,
+                    rightIcon: Icons.tv_outlined,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Time Period Toggle (Daily/Weekly)
+                Center(
+                  child: CustomToggleButtons(
+                    options: const ['Daily Trends', 'Weekly Trends'],
+                    selectedIndex: showDaily ? 0 : 1,
+                    onSelected: (index) {
+                      setState(() {
+                        showDaily = index == 0;
+                      });
+                      if (isMovieSelected) {
+                        showDaily ? fetchDailyMovies() : fetchWeeklyMovies();
+                      } else {
+                        showDaily ? fetchDailyTvShows() : fetchWeeklyTvShows();
+                      }
+                    },
+                    leftIcon: Icons.today_outlined,
+                    rightIcon: Icons.date_range_outlined,
+                  ),
+                ),
+              ],
+            ),
           ),
 
-          // Select Daily or Weekly Trends
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    showDaily = true; // Show Daily Trends
-                  });
-                  if (isMovieSelected) {
-                    fetchDailyMovies();
-                  } else {
-                    fetchDailyTvShows();
-                  }
-                },
-                child: Text('Günlük Trendler'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    showDaily = false; // Show Weekly Trends
-                  });
-                  if (isMovieSelected) {
-                    fetchWeeklyMovies();
-                  } else {
-                    fetchWeeklyTvShows();
-                  }
-                },
-                child: Text('Haftalık Trendler'),
-              ),
-            ],
-          ),
-
-          // Displaying List
+          // Content Grid
           Expanded(
             child: isLoadingDaily || isLoadingWeekly
-                ? Center(child: CircularProgressIndicator())
-                : ListView.builder(
-              itemCount: isMovieSelected
-                  ? (showDaily ? dailyMovies.length : weeklyMovies.length)
-                  : (showDaily ? dailyTvShows.length : weeklyTvShows.length),
-              itemBuilder: (context, index) {
-                final item = isMovieSelected
-                    ? (showDaily ? dailyMovies[index] : weeklyMovies[index])
-                    : (showDaily ? dailyTvShows[index] : weeklyTvShows[index]);
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DetailsPage(
-                          movieId: item['id'],
-                          title: item['name'] ?? item['title'],
-                          overview: item['overview'],
-                          posterPath: item['poster_path'] ?? '',
-                          releaseDate: item['release_date'] ?? 'Bilinmiyor',
-                          director: item['director'] ?? 'Bilinmiyor',
-                          actors: List<String>.from(item['actors'] ?? []),
-                          isMovie: isMovieSelected,  // <-- Burada isMovie parametresini sağlıyoruz
-                        ),
-                      ),
-                    );
-
-                  },
-                  child: Card(
-                    elevation: 4,
-                    margin: EdgeInsets.all(8.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Image.network(
-                          'https://image.tmdb.org/t/p/w500${item['poster_path']}',
-                          fit: BoxFit.cover,
-                          height: 200,
-                          width: double.infinity,
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            item['name'] ?? item['title'],  // Display name or title
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: AppTheme.accentColor,
                     ),
+                  )
+                : GridView.builder(
+                    padding: const EdgeInsets.all(8),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 0.7,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                    ),
+                    itemCount: isMovieSelected
+                        ? (showDaily ? dailyMovies.length : weeklyMovies.length)
+                        : (showDaily ? dailyTvShows.length : weeklyTvShows.length),
+                    itemBuilder: (context, index) {
+                      final item = isMovieSelected
+                          ? (showDaily ? dailyMovies[index] : weeklyMovies[index])
+                          : (showDaily ? dailyTvShows[index] : weeklyTvShows[index]);
+                      
+                      return MovieCard(
+                        title: item['name'] ?? item['title'],
+                        posterPath: item['poster_path'] ?? '',
+                        voteAverage: (item['vote_average'] ?? 0.0).toDouble(),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => DetailsPage(
+                                movieId: item['id'],
+                                title: item['name'] ?? item['title'],
+                                overview: item['overview'],
+                                posterPath: item['poster_path'] ?? '',
+                                releaseDate: item['release_date'] ?? 'Unknown',
+                                director: item['director'] ?? 'Unknown',
+                                actors: List<String>.from(item['actors'] ?? []),
+                                isMovie: isMovieSelected,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),
