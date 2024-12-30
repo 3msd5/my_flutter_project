@@ -35,7 +35,7 @@ class _DetailsPageState extends State<DetailsPage> {
   @override
   void initState() {
     super.initState();
-    movieData = ApiService().fetchMovieDetailsWithCredits(widget.movieId);
+    movieData = ApiService().fetchMovieDetailsWithCredits(widget.movieId, isMovie: widget.isMovie);
   }
 
   @override
@@ -169,15 +169,19 @@ class _DetailsPageState extends State<DetailsPage> {
                       // Info Sections
                       InfoSection(
                         icon: Icons.movie,
-                        title: 'Runtime',
-                        content: data['runtime'] != null
-                            ? '${data['runtime']} minutes'
-                            : 'Unknown',
+                        title: widget.isMovie ? 'Runtime' : 'Episode Runtime',
+                        content: widget.isMovie
+                            ? (data['runtime'] != null
+                                ? '${data['runtime']} minutes'
+                                : 'Unknown')
+                            : (data['episode_run_time'] != null && data['episode_run_time'].isNotEmpty
+                                ? '${data['episode_run_time'][0]} minutes per episode'
+                                : 'Unknown'),
                       ),
 
                       InfoSection(
                         icon: Icons.person,
-                        title: 'Director',
+                        title: widget.isMovie ? 'Director' : 'Creator',
                         content: data['director'] ?? 'Unknown',
                       ),
 
