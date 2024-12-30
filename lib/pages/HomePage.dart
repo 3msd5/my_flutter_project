@@ -18,6 +18,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final ApiService apiService = ApiService();
+  final ScrollController _scrollController = ScrollController();
   List dailyMovies = [];
   List weeklyMovies = [];
   List dailyTvShows = [];
@@ -26,81 +27,164 @@ class _HomePageState extends State<HomePage> {
   bool isLoadingWeekly = true;
   bool showDaily = true;
   bool isLoggedIn = false;
-  bool isMovieSelected = true; // True for Movies, False for TV Shows
+  bool isMovieSelected = true;
+  int currentPage = 1;
+  bool isLoadingMore = false;
+  bool hasMoreItems = true;
 
   @override
   void initState() {
     super.initState();
-    fetchDailyMovies();
-    fetchWeeklyMovies();
+    _fetchInitialData();
+    _scrollController.addListener(_scrollListener);
   }
 
-  Future<void> fetchDailyMovies() async {
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollListener() {
+    if (_scrollController.position.pixels ==
+        _scrollController.position.maxScrollExtent) {
+      _loadMoreData();
+    }
+  }
+
+  Future<void> _fetchInitialData() async {
     setState(() {
       isLoadingDaily = true;
+      isLoadingWeekly = true;
+      currentPage = 1;
+      hasMoreItems = true;
     });
+    await _fetchData();
+  }
+
+  Future<void> _loadMoreData() async {
+    if (isLoadingMore || !hasMoreItems) return;
+    
+    setState(() {
+      isLoadingMore = true;
+      currentPage++;
+    });
+    
+    await _fetchData();
+    
+    setState(() {
+      isLoadingMore = false;
+    });
+  }
+
+  Future<void> _fetchData() async {
     try {
-      dailyMovies = await apiService.fetchTrendingMoviesDaily();
+      if (isMovieSelected) {
+        if (showDaily) {
+          final newMovies = await apiService.fetchTrendingMoviesDaily(page: currentPage);
+          setState(() {
+            dailyMovies.addAll(newMovies);
+            hasMoreItems = newMovies.isNotEmpty;
+          });
+        } else {
+          final newMovies = await apiService.fetchTrendingMoviesWeekly(page: currentPage);
+          setState(() {
+            weeklyMovies.addAll(newMovies);
+            hasMoreItems = newMovies.isNotEmpty;
+          });
+        }
+      } else {
+        if (showDaily) {
+          final newShows = await apiService.fetchTrendingTVShowsDaily(page: currentPage);
+          setState(() {
+            dailyTvShows.addAll(newShows);
+            hasMoreItems = newShows.isNotEmpty;
+          });
+        } else {
+          final newShows = await apiService.fetchTrendingTVShowsWeekly(page: currentPage);
+          setState(() {
+            weeklyTvShows.addAll(newShows);
+            hasMoreItems = newShows.isNotEmpty;
+          });
+        }
+      }
     } catch (e) {
-      print(e);
+      setState(() {
+        hasMoreItems = false;
+      });
     } finally {
       if (mounted) {
         setState(() {
           isLoadingDaily = false;
-        });
-      }
-    }
-  }
-
-  Future<void> fetchWeeklyMovies() async {
-    setState(() {
-      isLoadingWeekly = true;
-    });
-    try {
-      weeklyMovies = await apiService.fetchTrendingMoviesWeekly();
-    } catch (e) {
-      print(e);
-    } finally {
-      if (mounted) {
-        setState(() {
           isLoadingWeekly = false;
         });
       }
     }
   }
 
-  Future<void> fetchDailyTvShows() async {
-    setState(() {
-      isLoadingDaily = true;
-    });
-    try {
-      dailyTvShows = await apiService.fetchTrendingTVShowsDaily();
-    } catch (e) {
-      print(e);
-    } finally {
-      if (mounted) {
-        setState(() {
-          isLoadingDaily = false;
-        });
-      }
-    }
-  }
+  Widget _buildContent() {
+    final items = isMovieSelected
+        ? (showDaily ? dailyMovies : weeklyMovies)
+        : (showDaily ? dailyTvShows : weeklyTvShows);
 
-  Future<void> fetchWeeklyTvShows() async {
-    setState(() {
-      isLoadingWeekly = true;
-    });
-    try {
-      weeklyTvShows = await apiService.fetchTrendingTVShowsWeekly();
-    } catch (e) {
-      print(e);
-    } finally {
-      if (mounted) {
-        setState(() {
-          isLoadingWeekly = false;
-        });
-      }
+    if (items.isEmpty && !isLoadingDaily && !isLoadingWeekly) {
+      return const Center(
+        child: Text('No items found'),
+      );
     }
+
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.all(8),
+            itemCount: items.length + (hasMoreItems ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index == items.length) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: hasMoreItems
+                        ? const CircularProgressIndicator()
+                        : const Text('No more items to load'),
+                  ),
+                );
+              }
+
+              final item = items[index];
+              return MovieCard(
+                title: item['name'] ?? item['title'],
+                posterPath: item['poster_path'] ?? '',
+                voteAverage: (item['vote_average'] ?? 0.0).toDouble(),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DetailsPage(
+                        movieId: item['id'],
+                        title: item['name'] ?? item['title'],
+                        overview: item['overview'],
+                        posterPath: item['poster_path'] ?? '',
+                        releaseDate: item['release_date'] ?? 'Unknown',
+                        director: item['director'] ?? 'Unknown',
+                        actors: List<String>.from(item['actors'] ?? []),
+                        isMovie: isMovieSelected,
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        if (isLoadingMore)
+          const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: CircularProgressIndicator(),
+          ),
+      ],
+    );
   }
 
   @override
@@ -209,12 +293,8 @@ class _HomePageState extends State<HomePage> {
                     onSelected: (index) {
                       setState(() {
                         isMovieSelected = index == 0;
+                        _fetchInitialData();
                       });
-                      if (showDaily) {
-                        isMovieSelected ? fetchDailyMovies() : fetchDailyTvShows();
-                      } else {
-                        isMovieSelected ? fetchWeeklyMovies() : fetchWeeklyTvShows();
-                      }
                     },
                     leftIcon: Icons.movie_outlined,
                     rightIcon: Icons.tv_outlined,
@@ -229,12 +309,8 @@ class _HomePageState extends State<HomePage> {
                     onSelected: (index) {
                       setState(() {
                         showDaily = index == 0;
+                        _fetchInitialData();
                       });
-                      if (isMovieSelected) {
-                        showDaily ? fetchDailyMovies() : fetchWeeklyMovies();
-                      } else {
-                        showDaily ? fetchDailyTvShows() : fetchWeeklyTvShows();
-                      }
                     },
                     leftIcon: Icons.today_outlined,
                     rightIcon: Icons.date_range_outlined,
@@ -243,7 +319,6 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-          // Content Grid
           Expanded(
             child: isLoadingDaily || isLoadingWeekly
                 ? const Center(
@@ -251,46 +326,7 @@ class _HomePageState extends State<HomePage> {
                       color: AppTheme.accentColor,
                     ),
                   )
-                : GridView.builder(
-                    padding: const EdgeInsets.all(8),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.7,
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
-                    ),
-                    itemCount: isMovieSelected
-                        ? (showDaily ? dailyMovies.length : weeklyMovies.length)
-                        : (showDaily ? dailyTvShows.length : weeklyTvShows.length),
-                    itemBuilder: (context, index) {
-                      final item = isMovieSelected
-                          ? (showDaily ? dailyMovies[index] : weeklyMovies[index])
-                          : (showDaily ? dailyTvShows[index] : weeklyTvShows[index]);
-                      
-                      return MovieCard(
-                        title: item['name'] ?? item['title'],
-                        posterPath: item['poster_path'] ?? '',
-                        voteAverage: (item['vote_average'] ?? 0.0).toDouble(),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => DetailsPage(
-                                movieId: item['id'],
-                                title: item['name'] ?? item['title'],
-                                overview: item['overview'],
-                                posterPath: item['poster_path'] ?? '',
-                                releaseDate: item['release_date'] ?? 'Unknown',
-                                director: item['director'] ?? 'Unknown',
-                                actors: List<String>.from(item['actors'] ?? []),
-                                isMovie: isMovieSelected,
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
+                : _buildContent(),
           ),
         ],
       ),

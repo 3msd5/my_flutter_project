@@ -5,22 +5,19 @@ class ApiService {
   final String apiKey = 'cefb463bcee27f953efce1ad0792525c';
 
   // Trend verilerini al (Film ya da Dizi)
-  Future<List> _fetchTrending(String type, String timePeriod) async {
+  Future<List> _fetchTrending(String type, String timePeriod, {int page = 1}) async {
     final response = await http.get(
       Uri.parse(
-        'https://api.themoviedb.org/3/trending/$type/$timePeriod?api_key=$apiKey&language=en-US&region=US',
+        'https://api.themoviedb.org/3/trending/$type/$timePeriod?api_key=$apiKey&language=en-US&region=US&page=$page',
       ),
     );
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body)['results'];
-      // Don't set default values for title/name as they come from the API
       for (var item in data) {
-        // For movies, use 'title' field
         if (type == 'movie' && !item.containsKey('title')) {
           item['title'] = item['original_title'] ?? 'Unknown';
         }
-        // For TV shows, use 'name' field
         if (type == 'tv' && !item.containsKey('name')) {
           item['name'] = item['original_name'] ?? 'Unknown';
         }
@@ -33,23 +30,23 @@ class ApiService {
   }
 
   // Trend film ve dizileri al (günlük)
-  Future<List> fetchTrendingMoviesDaily() async {
-    return _fetchTrending('movie', 'day');
+  Future<List> fetchTrendingMoviesDaily({int page = 1}) async {
+    return _fetchTrending('movie', 'day', page: page);
   }
 
   // Trend film ve dizileri al (haftalık)
-  Future<List> fetchTrendingMoviesWeekly() async {
-    return _fetchTrending('movie', 'week');
+  Future<List> fetchTrendingMoviesWeekly({int page = 1}) async {
+    return _fetchTrending('movie', 'week', page: page);
   }
 
   // Trend dizileri al (günlük)
-  Future<List> fetchTrendingTVShowsDaily() async {
-    return _fetchTrending('tv', 'day');
+  Future<List> fetchTrendingTVShowsDaily({int page = 1}) async {
+    return _fetchTrending('tv', 'day', page: page);
   }
 
   // Trend dizileri al (haftalık)
-  Future<List> fetchTrendingTVShowsWeekly() async {
-    return _fetchTrending('tv', 'week');
+  Future<List> fetchTrendingTVShowsWeekly({int page = 1}) async {
+    return _fetchTrending('tv', 'week', page: page);
   }
 
   // Film detaylarını al
@@ -62,7 +59,6 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      // Use original_title as fallback before using default value
       data['title'] = data['title'] ?? data['original_title'] ?? 'Unknown Movie';
       data['poster_path'] ??= '/placeholder.png';
       data['release_date'] ??= 'Unknown Release Date';
@@ -87,7 +83,6 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      // Use original_name as fallback before using default value
       data['name'] = data['name'] ?? data['original_name'] ?? 'Unknown TV Show';
       data['poster_path'] ??= '/placeholder.png';
       data['first_air_date'] ??= 'Unknown First Air Date';
@@ -111,7 +106,6 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body)['results'];
-      // Process search results to ensure titles are present
       for (var item in data) {
         item['title'] = item['title'] ?? item['original_title'] ?? 'Unknown';
         item['poster_path'] ??= '/placeholder.png';
@@ -132,7 +126,6 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body)['results'];
-      // Process search results to ensure names are present
       for (var item in data) {
         item['name'] = item['name'] ?? item['original_name'] ?? 'Unknown';
         item['poster_path'] ??= '/placeholder.png';
@@ -154,7 +147,6 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      // Film verileri - use original_title as fallback
       data['title'] = isMovie 
           ? (data['title'] ?? data['original_title'] ?? 'Unknown Movie')
           : (data['name'] ?? data['original_name'] ?? 'Unknown TV Show');
@@ -168,12 +160,10 @@ class ApiService {
       data['vote_average'] ??= 0.0;
       data['runtime'] ??= 0;
 
-      // Get director from crew
       final crew = data['credits']['crew'] ?? [];
       final directors = crew.where((member) => member['job'] == 'Director').toList();
       data['director'] = directors.isNotEmpty ? directors[0]['name'] : 'Unknown';
 
-      // Oyuncu bilgileri
       final cast = data['credits']['cast'] ?? [];
       for (var actor in cast) {
         actor['name'] ??= 'Unknown Actor';
@@ -182,7 +172,6 @@ class ApiService {
       }
       data['cast'] = cast;
 
-      // For TV shows, also check for created by
       if (!isMovie && data['created_by'] != null && data['created_by'].isNotEmpty) {
         final creators = data['created_by'].map((creator) => creator['name']).join(', ');
         data['director'] = creators;
@@ -204,7 +193,6 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      // Dizi verileri - use original_name as fallback
       data['name'] = data['name'] ?? data['original_name'] ?? 'Unknown TV Show';
       data['poster_path'] ??= '/placeholder.png';
       data['first_air_date'] ??= 'Unknown First Air Date';
@@ -213,7 +201,6 @@ class ApiService {
       data['original_language'] ??= 'Unknown Language';
       data['vote_average'] ??= 0.0;
 
-      // Oyuncu bilgileri
       final cast = data['credits']['cast'] ?? [];
       for (var actor in cast) {
         actor['name'] ??= 'Unknown Actor';
