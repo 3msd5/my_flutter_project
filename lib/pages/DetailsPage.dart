@@ -33,12 +33,12 @@ class DetailsPage extends StatefulWidget {
 }
 
 class _DetailsPageState extends State<DetailsPage> {
-  late Future<Map<String, dynamic>> movieData;
+  late Future<Map<String, dynamic>> mediaData;
 
   @override
   void initState() {
     super.initState();
-    movieData = ApiService().fetchMovieDetailsWithCredits(widget.movieId, isMovie: widget.isMovie);
+    mediaData = ApiService().fetchMovieDetailsWithCredits(widget.movieId, isMovie: widget.isMovie);
   }
 
   @override
@@ -46,7 +46,7 @@ class _DetailsPageState extends State<DetailsPage> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       body: FutureBuilder<Map<String, dynamic>>(
-        future: movieData,
+        future: mediaData,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
@@ -65,7 +65,6 @@ class _DetailsPageState extends State<DetailsPage> {
             final data = snapshot.data!;
             return CustomScrollView(
               slivers: <Widget>[
-                // App Bar with Backdrop
                 SliverAppBar(
                   expandedHeight: 300,
                   pinned: true,
@@ -80,7 +79,6 @@ class _DetailsPageState extends State<DetailsPage> {
                     background: Stack(
                       fit: StackFit.expand,
                       children: [
-                        // Backdrop Image
                         Hero(
                           tag: 'poster_${widget.posterPath}',
                           child: Image.network(
@@ -88,7 +86,6 @@ class _DetailsPageState extends State<DetailsPage> {
                             fit: BoxFit.cover,
                           ),
                         ),
-                        // Gradient Overlay
                         const DecoratedBox(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
@@ -105,12 +102,10 @@ class _DetailsPageState extends State<DetailsPage> {
                     ),
                   ),
                 ),
-                // Content
                 SliverToBoxAdapter(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Rating and Release Date Row
                       Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Row(
@@ -144,7 +139,9 @@ class _DetailsPageState extends State<DetailsPage> {
                             ),
                             const SizedBox(width: 16),
                             Text(
-                              data['release_date'] ?? 'Unknown',
+                              widget.isMovie
+                                  ? data['release_date'] ?? 'Unknown'
+                                  : data['first_air_date'] ?? 'Unknown',
                               style: const TextStyle(
                                 color: AppTheme.secondaryTextColor,
                               ),
@@ -152,8 +149,6 @@ class _DetailsPageState extends State<DetailsPage> {
                           ],
                         ),
                       ),
-
-                      // Overview
                       Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Text(
@@ -166,10 +161,7 @@ class _DetailsPageState extends State<DetailsPage> {
                           textAlign: TextAlign.justify,
                         ),
                       ),
-
                       const Divider(color: AppTheme.cardColor),
-
-                      // Basic Info Section
                       Container(
                         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         padding: const EdgeInsets.all(16),
@@ -219,8 +211,6 @@ class _DetailsPageState extends State<DetailsPage> {
                           ],
                         ),
                       ),
-
-                      // Detailed Info Section
                       Container(
                         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         padding: const EdgeInsets.all(16),
@@ -246,8 +236,6 @@ class _DetailsPageState extends State<DetailsPage> {
                           ],
                         ),
                       ),
-
-                      // Genres
                       if (data['genres'] != null && data['genres'].isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.all(16.0),
@@ -289,16 +277,12 @@ class _DetailsPageState extends State<DetailsPage> {
                             ],
                           ),
                         ),
-
-                      // Production Companies
                       if (data['production_companies'] != null &&
                           (data['production_companies'] as List).isNotEmpty)
                         ProductionCompanies(
                           companies: data['production_companies'] as List,
                         ),
-
-                      // Cast Section
-                      if (data['actors'] != null && data['actors'].isNotEmpty)
+                      if (data['cast'] != null && data['cast'].isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.all(16.0),
                           child: Column(
@@ -316,7 +300,7 @@ class _DetailsPageState extends State<DetailsPage> {
                                 spacing: 8,
                                 runSpacing: 8,
                                 children: [
-                                  for (var actor in data['actors'])
+                                  for (var actor in data['cast'])
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 12,
@@ -327,7 +311,7 @@ class _DetailsPageState extends State<DetailsPage> {
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                       child: Text(
-                                        actor,
+                                        actor['name'],
                                         style: const TextStyle(
                                           color: AppTheme.textColor,
                                           fontSize: 14,

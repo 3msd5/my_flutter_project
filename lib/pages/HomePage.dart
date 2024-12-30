@@ -26,17 +26,22 @@ class _HomePageState extends State<HomePage> {
   bool isLoadingDaily = true;
   bool isLoadingWeekly = true;
   bool showDaily = true;
-  bool isLoggedIn = false;
   bool isMovieSelected = true;
   int currentPage = 1;
   bool isLoadingMore = false;
   bool hasMoreItems = true;
+  User? currentUser;
 
   @override
   void initState() {
     super.initState();
     _fetchInitialData();
     _scrollController.addListener(_scrollListener);
+    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      setState(() {
+        currentUser = user;
+      });
+    });
   }
 
   @override
@@ -217,65 +222,53 @@ class _HomePageState extends State<HomePage> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            StreamBuilder<User?>(
-              stream: FirebaseAuth.instance.authStateChanges(),
-              builder: (context, snapshot) {
-                final user = snapshot.data;
-                final isLoggedIn = user != null;
-
-                return Column(
-                  children: [
-                    UserAccountsDrawerHeader(
-                      accountName: Text(
-                        isLoggedIn ? (user.displayName ?? 'User') : 'Guest',
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      accountEmail: Text(
-                        isLoggedIn ? user.email! : 'Sign in to access more features',
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                      currentAccountPicture: CircleAvatar(
-                        backgroundColor: Colors.white,
-                        backgroundImage: isLoggedIn && user.photoURL != null
-                            ? NetworkImage(user.photoURL!)
-                            : null,
-                        child: isLoggedIn && user.photoURL == null
-                            ? const Icon(Icons.person, color: Colors.blue, size: 40)
-                            : null,
-                      ),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.person_outline),
-                      title: Text(isLoggedIn ? 'My Profile' : 'Sign In'),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => isLoggedIn ? ProfilePage() : LoginPage(),
-                          ),
-                        );
-                      },
-                    ),
-                    if (isLoggedIn) ...[
-                      ListTile(
-                        leading: const Icon(Icons.favorite_border),
-                        title: const Text('My Favorites'),
-                        onTap: () {
-                          // Favorites page navigation
-                        },
-                      ),
-                      ListTile(
-                        leading: const Icon(Icons.list_alt),
-                        title: const Text('Watch List'),
-                        onTap: () {
-                          // Watch list page navigation
-                        },
-                      ),
-                    ],
-                  ],
+            UserAccountsDrawerHeader(
+              accountName: Text(
+                currentUser != null ? (currentUser!.displayName ?? 'User') : 'Guest',
+                style: const TextStyle(fontSize: 16),
+              ),
+              accountEmail: Text(
+                currentUser != null ? currentUser!.email! : 'Sign in to access more features',
+                style: const TextStyle(fontSize: 14),
+              ),
+              currentAccountPicture: CircleAvatar(
+                backgroundColor: Colors.white,
+                backgroundImage: currentUser != null && currentUser!.photoURL != null
+                    ? NetworkImage(currentUser!.photoURL!)
+                    : null,
+                child: currentUser != null && currentUser!.photoURL == null
+                    ? const Icon(Icons.person, color: Colors.blue, size: 40)
+                    : null,
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_outline),
+              title: Text(currentUser != null ? 'My Profile' : 'Sign In'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => currentUser != null ? ProfilePage() : LoginPage(),
+                  ),
                 );
               },
             ),
+            if (currentUser != null) ...[
+              ListTile(
+                leading: const Icon(Icons.favorite_border),
+                title: const Text('My Favorites'),
+                onTap: () {
+                  // Favorites page navigation
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.list_alt),
+                title: const Text('Watch List'),
+                onTap: () {
+                  // Watch list page navigation
+                },
+              ),
+            ],
           ],
         ),
       ),

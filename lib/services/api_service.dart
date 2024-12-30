@@ -201,6 +201,21 @@ class ApiService {
       data['original_language'] ??= 'Unknown Language';
       data['vote_average'] ??= 0.0;
 
+      // Handle episode runtime
+      if (data['episode_run_time'] != null && data['episode_run_time'].isNotEmpty) {
+        data['runtime'] = data['episode_run_time'][0];
+      } else {
+        data['runtime'] = 0;
+      }
+
+      // Handle creators
+      if (data['created_by'] != null && data['created_by'].isNotEmpty) {
+        data['director'] = data['created_by'].map((creator) => creator['name']).join(', ');
+      } else {
+        data['director'] = 'Unknown';
+      }
+
+      // Handle cast
       final cast = data['credits']['cast'] ?? [];
       for (var actor in cast) {
         actor['name'] ??= 'Unknown Actor';
@@ -208,6 +223,11 @@ class ApiService {
         actor['profile_path'] ??= '/placeholder.png';
       }
       data['cast'] = cast;
+
+      // Handle genres
+      if (data['genres'] == null) {
+        data['genres'] = [];
+      }
 
       return data;
     } else {
