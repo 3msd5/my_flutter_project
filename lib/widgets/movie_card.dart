@@ -38,25 +38,27 @@ class MovieCard extends StatelessWidget {
               // Poster Image
               Hero(
                 tag: 'poster_$posterPath',
-                child: Image.network(
-                  'https://image.tmdb.org/t/p/w500$posterPath',
-                  fit: BoxFit.cover,
-                  height: 250,
-                  width: double.infinity,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 250,
-                      color: AppTheme.cardColor,
-                      child: const Center(
-                        child: Icon(
-                          Icons.error_outline,
-                          color: AppTheme.accentColor,
-                          size: 50,
-                        ),
+                child: posterPath == '/placeholder.png'
+                    ? Image.asset(
+                        'assets/images/placeholder.png',
+                        fit: BoxFit.cover,
+                        height: 250,
+                        width: double.infinity,
+                      )
+                    : Image.network(
+                        'https://image.tmdb.org/t/p/w500$posterPath',
+                        fit: BoxFit.cover,
+                        height: 250,
+                        width: double.infinity,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Image.asset(
+                            'assets/images/placeholder.png',
+                            fit: BoxFit.cover,
+                            height: 250,
+                            width: double.infinity,
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
               ),
               // Gradient Overlay
               Positioned.fill(

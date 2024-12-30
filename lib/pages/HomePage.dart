@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
 import 'package:filmdeneme/services/api_service.dart';
 import 'package:filmdeneme/pages/profilePage.dart';
 import 'package:filmdeneme/pages/loginPage.dart';
@@ -17,7 +18,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final ApiService apiService = ApiService();
+  final ApiService apiService = ApiService(apiKey: 'cefb463bcee27f953efce1ad0792525c');
   final ScrollController _scrollController = ScrollController();
   List dailyMovies = [];
   List weeklyMovies = [];
@@ -32,21 +33,40 @@ class _HomePageState extends State<HomePage> {
   bool hasMoreItems = true;
   User? currentUser;
 
+  late final StreamSubscription<User?> _authSubscription;
+
   @override
   void initState() {
     super.initState();
     _fetchInitialData();
     _scrollController.addListener(_scrollListener);
-    FirebaseAuth.instance.authStateChanges().listen((User? user) {
-      setState(() {
-        currentUser = user;
-      });
+    
+    // Initialize auth state listener
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (mounted) {
+        setState(() {
+          currentUser = user;
+        });
+        
+        // If user is null (logged out), navigate to login page
+        if (user == null && context.mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => LoginPage()),
+            (route) => false,
+          );
+        }
+      }
     });
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _authSubscription.cancel();
+    dailyMovies.clear();
+    weeklyMovies.clear();
+    dailyTvShows.clear();
+    weeklyTvShows.clear();
     super.dispose();
   }
 
@@ -87,10 +107,12 @@ class _HomePageState extends State<HomePage> {
       if (isMovieSelected) {
         if (showDaily) {
           final newMovies = await apiService.fetchTrendingMoviesDaily(page: currentPage);
-          setState(() {
-            dailyMovies.addAll(newMovies);
-            hasMoreItems = newMovies.isNotEmpty;
-          });
+          if (mounted) {
+            setState(() {
+              dailyMovies.addAll(newMovies);
+              hasMoreItems = newMovies.isNotEmpty;
+            });
+          }
         } else {
           final newMovies = await apiService.fetchTrendingMoviesWeekly(page: currentPage);
           setState(() {
@@ -266,6 +288,34 @@ class _HomePageState extends State<HomePage> {
                 title: const Text('Watch List'),
                 onTap: () {
                   // Watch list page navigation
+                },
+              ),
+            ],
+            if (currentUser != null) ...[
+              Divider(),
+              ListTile(
+                leading: const Icon(Icons.logout),
+                title: const Text('Logout'),
+                onTap: () async {
+                  try {
+                    await FirebaseAuth.instance.signOut();
+                    if (context.mounted) {
+                      // Clear navigation stack and go to login page
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (context) => LoginPage()),
+                        (route) => false,
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Logout failed: ${e.toString()}'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
                 },
               ),
             ],

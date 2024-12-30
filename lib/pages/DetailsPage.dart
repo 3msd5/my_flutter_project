@@ -35,6 +35,7 @@ class DetailsPage extends StatefulWidget {
 class _DetailsPageState extends State<DetailsPage> {
   late Future<Map<String, dynamic>> mediaData;
   bool _isRetrying = false;
+  final ApiService _apiService = ApiService(apiKey: 'cefb463bcee27f953efce1ad0792525c');
 
   @override
   void initState() {
@@ -44,7 +45,7 @@ class _DetailsPageState extends State<DetailsPage> {
 
   Future<void> _loadData() async {
     setState(() {
-      mediaData = ApiService().fetchMovieDetailsWithCredits(widget.movieId, isMovie: widget.isMovie);
+      mediaData = _apiService.fetchMovieDetailsWithCredits(widget.movieId, isMovie: widget.isMovie);
     });
   }
 
@@ -305,7 +306,7 @@ class _DetailsPageState extends State<DetailsPage> {
                               icon: Icons.language,
                               title: 'Original Language',
                               content:
-                                  data['original_language']?.toUpperCase() ?? 'Unknown',
+                                  data['original_language']?.toUpperCase() ?? 'Unknown Language',
                             ),
                             InfoSection(
                               icon: Icons.local_movies,

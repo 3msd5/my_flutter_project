@@ -34,6 +34,7 @@ dependencies:
   firebase_auth: ^5.3.4
   http: ^1.2.2
   html: ^0.15.5
+  provider: ^6.1.1
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -58,6 +59,7 @@ dev_dependencies:
 flutter:
   assets:
     - assets/images/moviescoutlogo.png  # Eklediğiniz logo dosyasının yolu
+    - assets/images/placeholder.png
 
 
 

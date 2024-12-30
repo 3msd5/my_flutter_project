@@ -27,13 +27,6 @@ class ProfilePage extends StatelessWidget {
             SizedBox(height: 8),
             Text('Telefon: +90 123 456 7890'),
             SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                // Çıkış yapma işlemi yapılabilir
-                Navigator.pop(context); // Profil sayfasından çıkış yap
-              },
-              child: Text('Çıkış Yap'),
-            ),
           ],
         ),
       ),

@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  final String apiKey = 'cefb463bcee27f953efce1ad0792525c';
+  final String apiKey;
+
+  ApiService({required this.apiKey});
 
   // Trend verilerini al (Film ya da Dizi)
   Future<List> _fetchTrending(String type, String timePeriod, {int page = 1}) async {
@@ -90,6 +92,30 @@ class ApiService {
       data['status'] ??= 'Unknown Status';
       data['original_language'] ??= 'Unknown Language';
       data['vote_average'] ??= 0.0;
+      data['runtime'] ??= 0;
+
+      if (data['episode_run_time'] != null && data['episode_run_time'].isNotEmpty) {
+        data['runtime'] = data['episode_run_time'][0];
+      } else {
+        data['runtime'] = 0;
+      }
+
+      data['director'] = data['created_by'] != null && data['created_by'].isNotEmpty
+          ? data['created_by'].map((creator) => creator['name']).join(', ')
+          : 'Unknown';
+
+      final cast = data['credits']['cast'] ?? [];
+      for (var actor in cast) {
+        actor['name'] ??= 'Unknown Actor';
+        actor['character'] ??= 'Unknown Character';
+        actor['profile_path'] ??= '/placeholder.png';
+      }
+      data['cast'] = cast;
+
+      if (data['genres'] == null) {
+        data['genres'] = [];
+      }
+
       return data;
     } else {
       throw Exception('Failed to load TV show details');

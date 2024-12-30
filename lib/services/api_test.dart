@@ -10,7 +10,7 @@ class ApiTestWidget extends StatefulWidget {
 }
 
 class _ApiTestWidgetState extends State<ApiTestWidget> {
-  final ApiService _apiService = ApiService();
+  final ApiService _apiService = ApiService(apiKey: 'cefb463bcee27f953efce1ad0792525c');
   Map<String, dynamic>? _movieData;
   Map<String, dynamic>? _tvData;
   bool _isLoading = false;

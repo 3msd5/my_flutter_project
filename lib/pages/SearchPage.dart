@@ -12,7 +12,7 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
-  final ApiService _apiService = ApiService();
+  final ApiService _apiService = ApiService(apiKey: 'cefb463bcee27f953efce1ad0792525c');
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   
@@ -78,6 +78,17 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   Future<void> _navigateToDetails(Map<String, dynamic> item) async {
+    if (item['id'] == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Invalid item selected. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     try {
       // Pre-fetch details to ensure data is ready
       final details = _isMovie
@@ -86,21 +97,30 @@ class _SearchPageState extends State<SearchPage> {
 
       if (!mounted) return;
 
+      // Validate required fields
+      if (details == null ||
+          details['title'] == null && details['name'] == null ||
+          details['overview'] == null) {
+        throw Exception('Invalid details data');
+      }
+
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => DetailsPage(
-            movieId: item['id'],
+            movieId: item['id'] ?? 0,
             title: _isMovie
-                ? (details['title'] ?? 'Unknown')
-                : (details['name'] ?? 'Unknown'),
-            overview: details['overview'] ?? '',
-            posterPath: details['poster_path'] ?? '',
+                ? (details['title']?.toString() ?? 'Unknown')
+                : (details['name']?.toString() ?? 'Unknown'),
+            overview: details['overview']?.toString() ?? '',
+            posterPath: details['poster_path']?.toString() ?? '',
             releaseDate: _isMovie
-                ? (details['release_date'] ?? 'Unknown')
-                : (details['first_air_date'] ?? 'Unknown'),
-            director: details['director'] ?? 'Unknown',
-            actors: List<String>.from(details['cast']?.map((actor) => actor['name']) ?? []),
+                ? (details['release_date']?.toString() ?? 'Unknown')
+                : (details['first_air_date']?.toString() ?? 'Unknown'),
+            director: details['director']?.toString() ?? 'Unknown',
+            actors: List<String>.from(
+              details['cast']?.map((actor) => actor['name']?.toString() ?? 'Unknown') ?? ['Unknown']
+            ),
             isMovie: _isMovie,
           ),
         ),
