@@ -4,6 +4,7 @@ import 'package:filmdeneme/services/api_service.dart';
 import 'package:filmdeneme/pages/profilePage.dart';
 import 'package:filmdeneme/pages/loginPage.dart';
 import 'package:filmdeneme/pages/DetailsPage.dart';
+import 'package:filmdeneme/services/api_test.dart';
 import 'package:filmdeneme/pages/SearchPage.dart';
 import 'package:filmdeneme/theme/app_theme.dart';
 import 'package:filmdeneme/widgets/movie_card.dart';
@@ -114,6 +115,15 @@ class _HomePageState extends State<HomePage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const SearchPage()),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.api),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ApiTestWidget()),
               );
             },
           ),
