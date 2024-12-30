@@ -286,21 +286,26 @@ class _DetailsPageState extends State<DetailsPage> {
                               ),
                             ),
                             const SizedBox(height: 16),
-                            InfoSection(
-                              icon: Icons.movie,
-                              title: widget.isMovie ? 'Runtime' : 'Episode Runtime',
-                              content: widget.isMovie
-                                  ? (data['runtime'] != null
-                                      ? '${data['runtime']} minutes'
-                                      : 'Unknown')
-                                  : (data['episode_run_time'] != null && data['episode_run_time'].isNotEmpty
-                                      ? '${data['episode_run_time'][0]} minutes per episode'
-                                      : 'Unknown'),
-                            ),
+                            if (widget.isMovie || data['episode_run_time'] != null)
+                              InfoSection(
+                                icon: Icons.movie,
+                                title: widget.isMovie ? 'Runtime' : 'Episode Runtime',
+                                content: widget.isMovie
+                                    ? (data['runtime'] != null
+                                        ? '${data['runtime']} minutes'
+                                        : 'Unknown')
+                                    : ((data['episode_run_time'] is List && data['episode_run_time'].isNotEmpty)
+                                        ? '${data['episode_run_time'][0]} minutes per episode'
+                                        : 'Unknown'),
+                              ),
                             InfoSection(
                               icon: Icons.person,
                               title: widget.isMovie ? 'Director' : 'Creator',
-                              content: data['director'] ?? 'Unknown',
+                              content: widget.isMovie
+                                  ? (data['director'] ?? 'Unknown')
+                                  : ((data['created_by'] is List && data['created_by'].isNotEmpty)
+                                      ? data['created_by'][0]['name'] ?? 'Unknown'
+                                      : 'Unknown'),
                             ),
                             InfoSection(
                               icon: Icons.language,

@@ -167,45 +167,78 @@ class ApiService {
     final type = isMovie ? 'movie' : 'tv';
     final response = await http.get(
       Uri.parse(
-        'https://api.themoviedb.org/3/$type/$movieId?api_key=$apiKey&language=en-US&append_to_response=credits',
+        'https://api.themoviedb.org/3/$type/$movieId?api_key=$apiKey&language=en-US&append_to_response=credits,created_by',
       ),
     );
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      data['title'] = isMovie 
-          ? (data['title'] ?? data['original_title'] ?? 'Unknown Movie')
-          : (data['name'] ?? data['original_name'] ?? 'Unknown TV Show');
-      data['poster_path'] ??= '/placeholder.png';
-      data['release_date'] = isMovie 
-          ? (data['release_date'] ?? 'Unknown Release Date')
-          : (data['first_air_date'] ?? 'Unknown Release Date');
-      data['overview'] ??= 'No overview available';
-      data['status'] ??= 'Unknown Status';
-      data['original_language'] ??= 'Unknown Language';
-      data['vote_average'] ??= 0.0;
-      data['runtime'] ??= 0;
+      
+      try {
+        // Basic information
+        data['title'] = isMovie
+            ? (data['title'] ?? data['original_title'] ?? 'Unknown Movie')
+            : (data['name'] ?? data['original_name'] ?? 'Unknown TV Show');
+        data['poster_path'] ??= '/placeholder.png';
+        data['release_date'] = isMovie
+            ? (data['release_date'] ?? 'Unknown Release Date')
+            : (data['first_air_date'] ?? 'Unknown Release Date');
+        data['overview'] ??= 'No overview available';
+        data['status'] ??= 'Unknown Status';
+        data['original_language'] ??= 'Unknown Language';
+        data['vote_average'] ??= 0.0;
+        
+        // Handle runtime differently for movies and TV shows
+        if (isMovie) {
+          data['runtime'] = data['runtime'] ?? 0;
+        } else {
+          if (data['episode_run_time'] is List && data['episode_run_time'].isNotEmpty) {
+            data['runtime'] = data['episode_run_time'][0];
+          } else {
+            data['runtime'] = 0;
+          }
+        }
 
-      final crew = data['credits']['crew'] ?? [];
-      final directors = crew.where((member) => member['job'] == 'Director').toList();
-      data['director'] = directors.isNotEmpty ? directors[0]['name'] : 'Unknown';
+        // Handle director/creator
+        if (isMovie) {
+          final crew = data['credits']?['crew'] ?? [];
+          final directors = crew.where((member) => member['job'] == 'Director').toList();
+          data['director'] = directors.isNotEmpty ? directors[0]['name'] : 'Unknown';
+        } else {
+          if (data['created_by'] is List && data['created_by'].isNotEmpty) {
+            final creators = data['created_by'].map((creator) => creator['name']).toList();
+            data['director'] = creators.join(', ');
+          } else {
+            data['director'] = 'Unknown';
+          }
+        }
 
-      final cast = data['credits']['cast'] ?? [];
-      for (var actor in cast) {
-        actor['name'] ??= 'Unknown Actor';
-        actor['character'] ??= 'Unknown Character';
-        actor['profile_path'] ??= '/placeholder.png';
+        // Handle cast
+        final cast = data['credits']?['cast'] ?? [];
+        final processedCast = [];
+        for (var actor in cast) {
+          if (actor != null) {
+            processedCast.add({
+              'name': actor['name'] ?? 'Unknown Actor',
+              'character': actor['character'] ?? 'Unknown Character',
+              'profile_path': actor['profile_path'] ?? '/placeholder.png'
+            });
+          }
+        }
+        data['cast'] = processedCast;
+
+        // Ensure genres is always a list
+        if (data['genres'] == null) {
+          data['genres'] = [];
+        }
+
+        return data;
+      } catch (e) {
+        print('Error processing ${isMovie ? 'movie' : 'TV show'} data: $e');
+        throw Exception('Failed to process ${isMovie ? 'movie' : 'TV show'} details');
       }
-      data['cast'] = cast;
-
-      if (!isMovie && data['created_by'] != null && data['created_by'].isNotEmpty) {
-        final creators = data['created_by'].map((creator) => creator['name']).join(', ');
-        data['director'] = creators;
-      }
-
-      return data;
     } else {
-      throw Exception('Failed to load movie details with credits');
+      throw Exception('Failed to load ${isMovie ? 'movie' : 'TV show'} details');
     }
   }
 
