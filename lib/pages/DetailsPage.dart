@@ -34,11 +34,32 @@ class DetailsPage extends StatefulWidget {
 
 class _DetailsPageState extends State<DetailsPage> {
   late Future<Map<String, dynamic>> mediaData;
+  bool _isRetrying = false;
 
   @override
   void initState() {
     super.initState();
-    mediaData = ApiService().fetchMovieDetailsWithCredits(widget.movieId, isMovie: widget.isMovie);
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      mediaData = ApiService().fetchMovieDetailsWithCredits(widget.movieId, isMovie: widget.isMovie);
+    });
+  }
+
+  Future<void> _retryLoad() async {
+    setState(() {
+      _isRetrying = true;
+    });
+    
+    await _loadData();
+    
+    if (mounted) {
+      setState(() {
+        _isRetrying = false;
+      });
+    }
   }
 
   @override
@@ -50,15 +71,75 @@ class _DetailsPageState extends State<DetailsPage> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(
-                color: AppTheme.accentColor,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    color: AppTheme.accentColor,
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Loading details...',
+                    style: TextStyle(
+                      color: AppTheme.textColor,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
               ),
             );
           } else if (snapshot.hasError) {
             return Center(
-              child: Text(
-                'Error: ${snapshot.error}',
-                style: const TextStyle(color: AppTheme.textColor),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    color: AppTheme.errorColor,
+                    size: 48,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Failed to load details',
+                    style: TextStyle(
+                      color: AppTheme.textColor,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    snapshot.error.toString(),
+                    style: TextStyle(
+                      color: AppTheme.secondaryTextColor,
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: _isRetrying ? null : _retryLoad,
+                    icon: _isRetrying
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Icon(Icons.refresh),
+                    label: Text(_isRetrying ? 'Retrying...' : 'Try Again'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             );
           } else if (snapshot.hasData) {
@@ -68,12 +149,23 @@ class _DetailsPageState extends State<DetailsPage> {
                 SliverAppBar(
                   expandedHeight: 300,
                   pinned: true,
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
                   flexibleSpace: FlexibleSpaceBar(
                     title: Text(
                       widget.title,
                       style: const TextStyle(
-                        color: AppTheme.textColor,
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
+                        shadows: [
+                          Shadow(
+                            offset: Offset(0, 1),
+                            blurRadius: 2,
+                            color: Colors.black45,
+                          ),
+                        ],
                       ),
                     ),
                     background: Stack(
@@ -84,6 +176,18 @@ class _DetailsPageState extends State<DetailsPage> {
                           child: Image.network(
                             'https://image.tmdb.org/t/p/w500${widget.posterPath}',
                             fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: AppTheme.cardColor,
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    color: AppTheme.secondaryTextColor,
+                                    size: 64,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                         const DecoratedBox(
@@ -329,10 +433,47 @@ class _DetailsPageState extends State<DetailsPage> {
               ],
             );
           } else {
-            return const Center(
-              child: Text(
-                'No data available',
-                style: TextStyle(color: AppTheme.textColor),
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.movie_filter,
+                    color: AppTheme.secondaryTextColor,
+                    size: 64,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No ${widget.isMovie ? 'movie' : 'TV show'} details available',
+                    style: const TextStyle(
+                      color: AppTheme.textColor,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'The requested content could not be found',
+                    style: TextStyle(
+                      color: AppTheme.secondaryTextColor,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Go Back'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             );
           }

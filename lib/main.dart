@@ -10,22 +10,25 @@ import 'package:filmdeneme/pages/HomePage.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Set preferred orientations to portrait only
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
+  // Configure system UI and orientation
+  await Future.wait([
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]),
+    Future(() {
+      SystemChrome.setSystemUIOverlayStyle(
+        const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          systemNavigationBarColor: AppTheme.backgroundColor,
+          systemNavigationBarIconBrightness: Brightness.light,
+        ),
+      );
+    }),
   ]);
 
-  // Set system overlay style
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: AppTheme.backgroundColor,
-      systemNavigationBarIconBrightness: Brightness.light,
-    ),
-  );
-
+  // Initialize Firebase with error handling
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -33,6 +36,7 @@ Future<void> main() async {
     debugPrint("Firebase initialized successfully");
   } catch (e) {
     debugPrint("Firebase initialization error: $e");
+    // Consider showing a user-friendly error message or fallback functionality
   }
   
   runApp(const MyApp());
@@ -41,40 +45,99 @@ Future<void> main() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
+
+  Widget _buildLoadingScreen() {
+    return const Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              color: AppTheme.accentColor,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Loading MovieScout...',
+              style: TextStyle(
+                color: AppTheme.textColor,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorScreen(String error) {
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                color: Colors.red,
+                size: 48,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Oops! Something went wrong',
+                style: TextStyle(
+                  color: AppTheme.textColor,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                error,
+                style: TextStyle(
+                  color: AppTheme.secondaryTextColor,
+                  fontSize: 16,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  // Trigger a rebuild to retry
+                  FirebaseAuth.instance.signOut();
+                },
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'MovieScout',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
-      home: FutureBuilder(
-        future: FirebaseAuth.instance.authStateChanges().first,
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, AsyncSnapshot<User?> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              backgroundColor: AppTheme.backgroundColor,
-              body: Center(
-                child: CircularProgressIndicator(
-                  color: AppTheme.accentColor,
-                ),
-              ),
-            );
+            return _buildLoadingScreen();
           }
 
           if (snapshot.hasError) {
-            return Scaffold(
-              backgroundColor: AppTheme.backgroundColor,
-              body: Center(
-                child: Text(
-                  'Error: ${snapshot.error}',
-                  style: const TextStyle(color: AppTheme.textColor),
-                ),
-              ),
-            );
+            return _buildErrorScreen(snapshot.error.toString());
           }
 
-          // Default to LoginPage unless user is already logged in
-          return LoginPage();
+          // If user is logged in, navigate to HomePage, otherwise show LoginPage
+          return snapshot.hasData ? HomePage() : LoginPage();
         },
       ),
     );

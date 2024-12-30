@@ -1,8 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'HomePage.dart'; // Giriş başarılıysa gidilecek sayfa
-import 'signUp.dart'; // Kayıt olma sayfasına yönlendirme
-import 'ResetPasswordPage.dart'; // Şifre sıfırlama sayfasına yönlendirme
+import 'package:filmdeneme/theme/app_theme.dart';
+import 'HomePage.dart';
+import 'signUp.dart';
+import 'ResetPasswordPage.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -22,12 +23,15 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _login() async {
+    // Hide keyboard when login starts
+    FocusScope.of(context).unfocus();
+
     setState(() {
       _isLoading = true;
       _errorMessage = '';
     });
 
-    // Giriş yapılmadan önce inputları doğrula
+    // Validate inputs before proceeding
     if (!_validateInputs()) {
       setState(() {
         _isLoading = false;
@@ -36,41 +40,113 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     try {
-      // Firebase Authentication ile giriş işlemi
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text,
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppTheme.backgroundColor,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: AppTheme.accentColor),
+                SizedBox(height: 16),
+                Text(
+                  'Logging in...',
+                  style: TextStyle(color: AppTheme.textColor),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      // Attempt Firebase Authentication
+      final UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
-      // Giriş işlemi başarılıysa, HomePage'e yönlendir
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => HomePage()),
-      );
+      if (!mounted) return;
 
-      // Başarılı girişten sonra formu temizle
-      _emailController.clear();
-      _passwordController.clear();
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      if (userCredential.user != null) {
+        // Clear form and navigate to HomePage
+        _emailController.clear();
+        _passwordController.clear();
+        
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomePage()),
+        );
+      }
     } on FirebaseAuthException catch (e) {
-      // Firebase Auth hatası yönetimi
+      // Close loading dialog if it's showing
+      if (Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+
+      // Handle Firebase Auth errors
       String errorMsg = '';
       switch (e.code) {
         case 'user-not-found':
-          errorMsg = 'User not found';
+          errorMsg = 'No account found with this email';
           break;
         case 'wrong-password':
-          errorMsg = 'Wrong password';
+          errorMsg = 'Incorrect password';
           break;
         case 'invalid-email':
-          errorMsg = 'Invalid email address';
+          errorMsg = 'Please enter a valid email address';
+          break;
+        case 'user-disabled':
+          errorMsg = 'This account has been disabled';
+          break;
+        case 'too-many-requests':
+          errorMsg = 'Too many attempts. Please try again later';
           break;
         default:
-          errorMsg = e.message ?? 'An error occurred';
+          errorMsg = 'Login failed: ${e.message}';
       }
 
       setState(() {
         _errorMessage = errorMsg;
       });
+
+      // Show error in SnackBar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMsg),
+          backgroundColor: AppTheme.errorColor,
+          behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: 'OK',
+            textColor: Colors.white,
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      // Handle other errors
+      setState(() {
+        _errorMessage = 'An unexpected error occurred';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('An unexpected error occurred'),
+          backgroundColor: AppTheme.errorColor,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } finally {
       setState(() {
         _isLoading = false;
@@ -80,107 +156,212 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Welcome to MovieScout App')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Logo ekleme kısmı
-            Center(
-              child: Image.asset(
-                'assets/images/moviescoutlogo.png',  // Logonun bulunduğu dosya yolu
-                height: 200,  // İhtiyaca göre boyutlandırabilirsiniz
-                width: 200,   // İhtiyaca göre boyutlandırabilirsiniz
-              ),
-            ),
-            SizedBox(height: 32), // Logodan form arasına boşluk eklemek için
-            Form(
-              key: _formKey,
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // E-posta input
-                  TextFormField(
-                    controller: _emailController,
-                    decoration: InputDecoration(
-                      labelText: 'E-Mail',
-                      border: OutlineInputBorder(),
+                  const SizedBox(height: 48),
+                  // Logo and Welcome Text
+                  Center(
+                    child: Hero(
+                      tag: 'app_logo',
+                      child: Image.asset(
+                        'assets/images/moviescoutlogo.png',
+                        height: 120,
+                        width: 120,
+                      ),
                     ),
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      if (!RegExp(r'^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$').hasMatch(value)) {
-                        return 'Please enter a valid email address';
-                      }
-                      return null;
-                    },
                   ),
-                  SizedBox(height: 16),
-                  // Şifre input
-                  TextFormField(
-                    controller: _passwordController,
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      border: OutlineInputBorder(),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Welcome Back!',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: AppTheme.textColor,
+                      fontWeight: FontWeight.bold,
                     ),
-                    obscureText: true,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your password';
-                      }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
-                      return null;
-                    },
+                    textAlign: TextAlign.center,
                   ),
-                  SizedBox(height: 16),
-                  // Giriş yap butonu
-                  _isLoading
-                      ? Center(child: CircularProgressIndicator())
-                      : ElevatedButton(
-                    onPressed: _login, // Giriş yap butonuna tıklandığında _login() fonksiyonu çalışacak
-                    child: Text('Log In'),
-                  ),
-                  // Kayıt ol butonu
-                  TextButton(
-                    onPressed: () {
-                      // Kayıt ol sayfasına yönlendirme
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => SignUpPage()),
-                      );
-                    },
-                    child: Text("Don't have an account? Sign up"),
-                  ),
-                  // Şifrenizi unuttunuz butonu
-                  TextButton(
-                    onPressed: () {
-                      // Şifre sıfırlama sayfasına yönlendirme
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => ResetPasswordPage()),
-                      );
-                    },
-                    child: Text("Forgot your password?"),
-                  ),
-                  // Hata mesajı
-                  if (_errorMessage.isNotEmpty) ...[
-                    SizedBox(height: 16),
-                    Text(
-                      _errorMessage,
-                      style: TextStyle(color: Colors.red),
-                      textAlign: TextAlign.center,
+                  const SizedBox(height: 8),
+                  Text(
+                    'Sign in to continue',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.secondaryTextColor,
                     ),
-                  ],
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 48),
+                  
+                  // Login Form
+                  Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Email Field
+                        TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          decoration: InputDecoration(
+                            labelText: 'Email',
+                            hintText: 'Enter your email',
+                            prefixIcon: const Icon(Icons.email_outlined),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your email';
+                            }
+                            if (!RegExp(r'^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$').hasMatch(value)) {
+                              return 'Please enter a valid email address';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Password Field
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: true,
+                          textInputAction: TextInputAction.done,
+                          onFieldSubmitted: (_) => _login(),
+                          decoration: InputDecoration(
+                            labelText: 'Password',
+                            hintText: 'Enter your password',
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your password';
+                            }
+                            if (value.length < 6) {
+                              return 'Password must be at least 6 characters';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        
+                        // Forgot Password Link
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => ResetPasswordPage()),
+                              );
+                            },
+                            child: Text(
+                              'Forgot Password?',
+                              style: TextStyle(
+                                color: AppTheme.primaryColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        
+                        // Login Button
+                        SizedBox(
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _login,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+                              ),
+                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Sign In',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        
+                        // Sign Up Link
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "Don't have an account? ",
+                              style: TextStyle(color: AppTheme.secondaryTextColor),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => SignUpPage()),
+                                );
+                              },
+                              child: Text(
+                                'Sign Up',
+                                style: TextStyle(
+                                  color: AppTheme.primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        
+                        // Error Message
+                        if (_errorMessage.isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppTheme.errorColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+                            ),
+                            child: Text(
+                              _errorMessage,
+                              style: TextStyle(
+                                color: AppTheme.errorColor,
+                                fontSize: 14,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
