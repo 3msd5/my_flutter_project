@@ -10,6 +10,8 @@ import 'package:filmdeneme/pages/SearchPage.dart';
 import 'package:filmdeneme/theme/app_theme.dart';
 import 'package:filmdeneme/widgets/movie_card.dart';
 import 'package:filmdeneme/widgets/custom_toggle_buttons.dart';
+import 'package:filmdeneme/pages/favorites_page.dart';
+import 'package:filmdeneme/pages/watchlist_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -184,6 +186,9 @@ class _HomePageState extends State<HomePage> {
                 title: item['name'] ?? item['title'],
                 posterPath: item['poster_path'] ?? '',
                 voteAverage: (item['vote_average'] ?? 0.0).toDouble(),
+                overview: item['overview'] ?? '',
+                movieId: item['id'],
+                isMovie: isMovieSelected,
                 onTap: () {
                   Navigator.push(
                     context,
@@ -280,14 +285,24 @@ class _HomePageState extends State<HomePage> {
                 leading: const Icon(Icons.favorite_border),
                 title: const Text('My Favorites'),
                 onTap: () {
-                  // Favorites page navigation
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const FavoritesPage(),
+                    ),
+                  );
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.list_alt),
                 title: const Text('Watch List'),
                 onTap: () {
-                  // Watch list page navigation
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const WatchlistPage(),
+                    ),
+                  );
                 },
               ),
             ],

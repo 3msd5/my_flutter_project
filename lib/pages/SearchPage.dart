@@ -215,6 +215,9 @@ class _SearchPageState extends State<SearchPage> {
               : (item['name'] ?? 'Unknown'),
           posterPath: item['poster_path'] ?? '',
           voteAverage: (item['vote_average'] ?? 0.0).toDouble(),
+          overview: item['overview'] ?? '',
+          movieId: item['id'],
+          isMovie: _isMovie,
           onTap: () => _navigateToDetails(item),
         );
       },
