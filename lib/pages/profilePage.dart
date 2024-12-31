@@ -41,12 +41,12 @@ class _ProfilePageState extends State<ProfilePage> {
 
       // Başarılı bir güncelleme sonrası kullanıcıya mesaj ver
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Profil başarıyla güncellendi!')),
+        SnackBar(content: Text('Profile successfully updated!')),
       );
     } catch (e) {
-      print("Hata: $e");
+      print("Error: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Profil güncellenirken bir hata oluştu.')),
+        SnackBar(content: Text('An error occurred while updating the profile.')),
       );
     }
   }
@@ -61,7 +61,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Profilim'),
+        title: Text('My Profile'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -80,7 +80,7 @@ class _ProfilePageState extends State<ProfilePage> {
             TextField(
               controller: _nameController,
               decoration: InputDecoration(
-                labelText: 'Kullanıcı Adı',
+                labelText: 'Name and Surname',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -90,7 +90,7 @@ class _ProfilePageState extends State<ProfilePage> {
             TextField(
               controller: _phoneController,
               decoration: InputDecoration(
-                labelText: 'Telefon Numarası',
+                labelText: 'Phone Number',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -99,7 +99,7 @@ class _ProfilePageState extends State<ProfilePage> {
             // Güncelle butonu
             ElevatedButton(
               onPressed: _updateUserData,
-              child: Text('Güncelle'),
+              child: Text('Update'),
             ),
           ],
         ),

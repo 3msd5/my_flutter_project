@@ -295,7 +295,7 @@ class _HomePageState extends State<HomePage> {
               ),
               ListTile(
                 leading: const Icon(Icons.list_alt),
-                title: const Text('Watch List'),
+                title: const Text('My Watchlist'),
                 onTap: () {
                   Navigator.push(
                     context,
