@@ -36,9 +36,11 @@ Future<void> main() async {
     debugPrint("Firebase initialized successfully");
   } catch (e) {
     debugPrint("Firebase initialization error: $e");
-    // Consider showing a user-friendly error message or fallback functionality
+    // Kullanıcıya hata mesajı göster
+    throw Exception("Firebase initialization failed: $e");
   }
-  
+
+
   runApp(const MyApp());
 }
 
