@@ -57,7 +57,7 @@ class _LoginPageState extends State<LoginPage> {
                 CircularProgressIndicator(color: AppTheme.accentColor),
                 SizedBox(height: 16),
                 Text(
-                  'Logging in...',
+                  '',
                   style: TextStyle(color: AppTheme.textColor),
                 ),
               ],

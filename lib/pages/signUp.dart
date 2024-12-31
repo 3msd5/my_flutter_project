@@ -42,7 +42,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
         // Kayıt başarılı olduğunda, kullanıcıyı anasayfaya yönlendir veya login sayfasına
         // Navigator.pushReplacementNamed(context, '/home');
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Kayıt başarılı!')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('')));
       } catch (e) {
         setState(() {
           _errorMessage = e.toString();
@@ -54,7 +54,7 @@ class _SignUpPageState extends State<SignUpPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Kayıt Ol')),
+      appBar: AppBar(title: Text('Sign up for MovieScout')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -64,10 +64,10 @@ class _SignUpPageState extends State<SignUpPage> {
               // Ad TextFormField
               TextFormField(
                 controller: _nameController,
-                decoration: InputDecoration(labelText: 'Ad Soyad'),
+                decoration: InputDecoration(labelText: 'Name and Surname'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Lütfen adınızı girin';
+                    return 'Please enter your name';
                   }
                   return null;
                 },
@@ -75,14 +75,14 @@ class _SignUpPageState extends State<SignUpPage> {
               // E-mail TextFormField
               TextFormField(
                 controller: _emailController,
-                decoration: InputDecoration(labelText: 'E-posta'),
+                decoration: InputDecoration(labelText: 'E-Mail'),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Lütfen e-posta girin';
+                    return 'Please enter email';
                   }
                   if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(value)) {
-                    return 'Geçersiz e-posta adresi';
+                    return 'Invalid email address';
                   }
                   return null;
                 },
@@ -90,11 +90,11 @@ class _SignUpPageState extends State<SignUpPage> {
               // Telefon TextFormField
               TextFormField(
                 controller: _phoneController,
-                decoration: InputDecoration(labelText: 'Telefon Numarası'),
+                decoration: InputDecoration(labelText: 'Phone Number'),
                 keyboardType: TextInputType.phone,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Lütfen telefon numarası girin';
+                    return 'Please enter phone number';
                   }
                   return null;
                 },
@@ -102,14 +102,14 @@ class _SignUpPageState extends State<SignUpPage> {
               // Şifre TextFormField
               TextFormField(
                 controller: _passwordController,
-                decoration: InputDecoration(labelText: 'Şifre'),
+                decoration: InputDecoration(labelText: 'Password'),
                 obscureText: true,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Lütfen şifre girin';
+                    return 'Please enter password';
                   }
                   if (value.length < 6) {
-                    return 'Şifre en az 6 karakter olmalı';
+                    return 'Password must be at least 6 characters';
                   }
                   return null;
                 },
@@ -126,7 +126,7 @@ class _SignUpPageState extends State<SignUpPage> {
               // Kayıt ol butonu
               ElevatedButton(
                 onPressed: _signUp,
-                child: Text('Kayıt Ol'),
+                child: Text('Sign Up'),
               ),
             ],
           ),
