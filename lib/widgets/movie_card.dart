@@ -186,14 +186,19 @@ class _MovieCardState extends State<MovieCard> {
             ),
             if (!_isLoading && FirebaseAuth.instance.currentUser != null)
               Positioned(
-                top: 4,
-                right: 4,
+              top: 4,
+              right: 4,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(20),
+                ),
                 child: Row(
                   children: [
                     IconButton(
                       icon: Icon(
                         _isInFavorites ? Icons.favorite : Icons.favorite_border,
-                        color: _isInFavorites ? Colors.red : Colors.grey,
+                        color: _isInFavorites ? Colors.red : Colors.white,
                       ),
                       onPressed: _toggleFavorite,
                       tooltip: 'Add to favorites',
@@ -201,13 +206,14 @@ class _MovieCardState extends State<MovieCard> {
                     IconButton(
                       icon: Icon(
                         _isInWatchlist ? Icons.bookmark : Icons.bookmark_border,
-                        color: _isInWatchlist ? Colors.blue : Colors.grey,
+                        color: _isInWatchlist ? Colors.blue : Colors.white,
                       ),
                       onPressed: _toggleWatchlist,
                       tooltip: 'Add to watchlist',
                     ),
                   ],
                 ),
+              ),
               ),
           ],
         ),

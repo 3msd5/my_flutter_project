@@ -5,6 +5,9 @@ import 'package:filmdeneme/widgets/info_section.dart';
 import 'package:filmdeneme/widgets/production_companies.dart';
 import 'package:filmdeneme/widgets/movie_info.dart';
 import 'package:filmdeneme/widgets/tv_show_info.dart';
+import 'package:filmdeneme/services/user_lists_service.dart';
+import 'package:filmdeneme/models/user_lists.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class DetailsPage extends StatefulWidget {
   final int movieId;
@@ -35,12 +38,88 @@ class DetailsPage extends StatefulWidget {
 class _DetailsPageState extends State<DetailsPage> {
   late Future<Map<String, dynamic>> mediaData;
   bool _isRetrying = false;
+  bool _isInFavorites = false;
+  bool _isInWatchlist = false;
+  bool _isLoadingLists = true;
   final ApiService _apiService = ApiService(apiKey: 'cefb463bcee27f953efce1ad0792525c');
+  final UserListsService _userListsService = UserListsService();
+
+  Future<void> _checkLists() async {
+    if (FirebaseAuth.instance.currentUser != null) {
+      final inFavorites = await _userListsService.isInFavorites(widget.movieId);
+      final inWatchlist = await _userListsService.isInWatchlist(widget.movieId);
+      
+      if (mounted) {
+        setState(() {
+          _isInFavorites = inFavorites;
+          _isInWatchlist = inWatchlist;
+          _isLoadingLists = false;
+        });
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          _isLoadingLists = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (FirebaseAuth.instance.currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please sign in to add to favorites'),
+        ),
+      );
+      return;
+    }
+
+    final movie = UserMovie(
+      id: widget.movieId,
+      title: widget.title,
+      posterPath: widget.posterPath,
+      voteAverage: 0.0, // We'll update this with actual data
+      overview: widget.overview,
+      releaseDate: widget.releaseDate,
+      isMovie: widget.isMovie,
+      addedAt: DateTime.now(),
+    );
+
+    await _userListsService.toggleFavorite(movie);
+    await _checkLists();
+  }
+
+  Future<void> _toggleWatchlist() async {
+    if (FirebaseAuth.instance.currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please sign in to add to watchlist'),
+        ),
+      );
+      return;
+    }
+
+    final movie = UserMovie(
+      id: widget.movieId,
+      title: widget.title,
+      posterPath: widget.posterPath,
+      voteAverage: 0.0, // We'll update this with actual data
+      overview: widget.overview,
+      releaseDate: widget.releaseDate,
+      isMovie: widget.isMovie,
+      addedAt: DateTime.now(),
+    );
+
+    await _userListsService.toggleWatchlist(movie);
+    await _checkLists();
+  }
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _checkLists();
   }
 
   Future<void> _loadData() async {
@@ -154,6 +233,36 @@ class _DetailsPageState extends State<DetailsPage> {
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
+                  actions: [
+                    if (!_isLoadingLists && FirebaseAuth.instance.currentUser != null)
+                      Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              icon: Icon(
+                                _isInFavorites ? Icons.favorite : Icons.favorite_border,
+                                color: _isInFavorites ? Colors.red : Colors.white,
+                              ),
+                              onPressed: _toggleFavorite,
+                              tooltip: 'Add to favorites',
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                _isInWatchlist ? Icons.bookmark : Icons.bookmark_border,
+                                color: _isInWatchlist ? Colors.blue : Colors.white,
+                              ),
+                              onPressed: _toggleWatchlist,
+                              tooltip: 'Add to watchlist',
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
                   flexibleSpace: FlexibleSpaceBar(
                     title: Text(
                       widget.title,
