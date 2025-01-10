@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
@@ -36,29 +37,48 @@ class _HomePageState extends State<HomePage> {
   User? currentUser;
 
   late final StreamSubscription<User?> _authSubscription;
+  String _userFullName = '';
 
+  Future<void> _getUserFullNameFromFirestore() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      if (userDoc.exists) {
+        setState(() {
+          _userFullName = userDoc['name'] ?? 'Kullanıcı';
+        });
+      }
+    }
+  }
+
+  String _getUserFullName() {
+    return _userFullName.isNotEmpty ? _userFullName : 'Kullanıcı';
+  }
   @override
   void initState() {
     super.initState();
+    _getUserFullNameFromFirestore(); // Kullanıcı adını almak için çağrılıyor
     _fetchInitialData();
     _scrollController.addListener(_scrollListener);
-    
-    // Initialize auth state listener
-    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((User? user) {
-      if (mounted) {
-        setState(() {
-          currentUser = user;
+
+    _authSubscription =
+        FirebaseAuth.instance.authStateChanges().listen((User? user) {
+          if (mounted) {
+            setState(() {
+              currentUser = user;
+            });
+
+            if (user == null && context.mounted) {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => LoginPage()),
+                    (route) => false,
+              );
+            }
+          }
         });
-        
-        // If user is null (logged out), navigate to login page
-        if (user == null && context.mounted) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => LoginPage()),
-            (route) => false,
-          );
-        }
-      }
-    });
   }
 
   @override
@@ -251,13 +271,13 @@ class _HomePageState extends State<HomePage> {
           children: [
             UserAccountsDrawerHeader(
               accountName: Text(
-                currentUser != null ? (currentUser!.displayName ?? 'User') : 'Guest',
+                currentUser != null
+                    ? "Welcome \n${_getUserFullName()}"
+                    : 'Welcome! Please login.',
                 style: const TextStyle(fontSize: 16),
               ),
-              accountEmail: Text(
-                currentUser != null ? currentUser!.email! : 'Sign in to access more features',
-                style: const TextStyle(fontSize: 14),
-              ),
+              accountEmail: null,
+
               currentAccountPicture: CircleAvatar(
                 backgroundColor: Colors.white,
                 backgroundImage: currentUser != null && currentUser!.photoURL != null
@@ -268,6 +288,7 @@ class _HomePageState extends State<HomePage> {
                     : null,
               ),
             ),
+
             ListTile(
               leading: const Icon(Icons.person_outline),
               title: Text(currentUser != null ? 'My Profile' : 'Sign In'),

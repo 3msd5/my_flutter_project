@@ -56,10 +56,7 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 CircularProgressIndicator(color: AppTheme.accentColor),
                 SizedBox(height: 16),
-                Text(
-                  '',
-                  style: TextStyle(color: AppTheme.textColor),
-                ),
+
               ],
             ),
           ),
