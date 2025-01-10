@@ -59,7 +59,6 @@ class UserProfilePage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Kullanıcı Bilgileri
-
                 Text(
                   'Name and Surname: ${userData['name']}',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -80,14 +79,17 @@ class UserProfilePage extends StatelessWidget {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(
-                  height: 180,  // Posterler için daha fazla alan
+                  height: 250,  // Posterler için daha fazla alan
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: favoriteMovies.length,
                     itemBuilder: (context, index) {
                       // Favori film bilgilerini alıyoruz
                       final movie = favoriteMovies[index].data() as Map<String, dynamic>;
-                      final posterUrl = movie['posterUrl'];  // Film poster URL'sini alıyoruz
+                      final posterPath = movie['posterPath'];  // Film poster URL'sini alıyoruz
+                      final posterUrl = posterPath != null
+                          ? 'https://image.tmdb.org/t/p/w500$posterPath'
+                          : null;  // Poster URL'sini oluşturuyoruz
 
                       return Padding(
                         padding: const EdgeInsets.all(8.0),
@@ -98,18 +100,40 @@ class UserProfilePage extends StatelessWidget {
                           ),
                           child: Column(
                             children: [
+                              // Poster görüntüleme
                               posterUrl != null
-                                  ? Image.network(
-                                posterUrl,
-                                height: 120,
-                                width: 80,
-                                fit: BoxFit.cover,
+                                  ? ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  posterUrl,
+                                  height: 150,  // Poster yüksekliği
+                                  width: 100,   // Poster genişliği
+                                  fit: BoxFit.cover,
+                                ),
                               )
-                                  : Icon(Icons.image, size: 80),  // Poster yoksa yedek ikon göster
-                              SizedBox(height: 8),
-                              Text(
-                                movie['title'] ?? 'No title',
-                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                  : Icon(Icons.image, size: 100),  // Poster yoksa yedek ikon göster
+
+                              // Alt şerit
+                              Container(
+                                width: 100,
+                                height: 40,  // Alt şerit yüksekliği
+                                decoration: BoxDecoration(
+                                  color: Colors.white24.withOpacity(0.7),
+                                  borderRadius: BorderRadius.only(
+                                    bottomLeft: Radius.circular(8),
+                                    bottomRight: Radius.circular(8),
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    movie['title'] ?? 'No title',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 14,  // Daha büyük font boyutu
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -127,14 +151,17 @@ class UserProfilePage extends StatelessWidget {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(
-                  height: 180,  // Posterler için daha fazla alan
+                  height: 250,  // Posterler için daha fazla alan
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: watchlistMovies.length,
                     itemBuilder: (context, index) {
                       // İzleme listesi film bilgilerini alıyoruz
                       final movie = watchlistMovies[index].data() as Map<String, dynamic>;
-                      final posterUrl = movie['posterUrl'];  // Film poster URL'sini alıyoruz
+                      final posterPath = movie['posterPath'];  // Film poster URL'sini alıyoruz
+                      final posterUrl = posterPath != null
+                          ? 'https://image.tmdb.org/t/p/w500$posterPath'
+                          : null;  // Poster URL'sini oluşturuyoruz
 
                       return Padding(
                         padding: const EdgeInsets.all(8.0),
@@ -145,18 +172,40 @@ class UserProfilePage extends StatelessWidget {
                           ),
                           child: Column(
                             children: [
+                              // Poster görüntüleme
                               posterUrl != null
-                                  ? Image.network(
-                                posterUrl,
-                                height: 120,
-                                width: 80,
-                                fit: BoxFit.cover,
+                                  ? ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  posterUrl,
+                                  height: 150,  // Poster yüksekliği
+                                  width: 100,   // Poster genişliği
+                                  fit: BoxFit.cover,
+                                ),
                               )
-                                  : Icon(Icons.image, size: 80),  // Poster yoksa yedek ikon göster
-                              SizedBox(height: 8),
-                              Text(
-                                movie['title'] ?? 'No title',
-                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                  : Icon(Icons.image, size: 100),  // Poster yoksa yedek ikon göster
+
+                              // Alt şerit
+                              Container(
+                                width: 100,
+                                height: 40,  // Alt şerit yüksekliği
+                                decoration: BoxDecoration(
+                                  color: Colors.white24.withOpacity(0.7),
+                                  borderRadius: BorderRadius.only(
+                                    bottomLeft: Radius.circular(8),
+                                    bottomRight: Radius.circular(8),
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    movie['title'] ?? 'No title',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 14,  // Daha büyük font boyutu
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                               ),
                             ],
                           ),

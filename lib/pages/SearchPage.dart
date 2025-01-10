@@ -4,6 +4,7 @@ import 'package:filmdeneme/widgets/MovieCard.dart'; // MovieCard widget'ını da
 import 'package:filmdeneme/theme/app_theme.dart'; // App teması
 import 'package:filmdeneme/pages/DetailsPage.dart';
 import 'package:filmdeneme/pages/UserProfilePage.dart';
+import 'package:filmdeneme/services/api_service.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({Key? key}) : super(key: key);
@@ -32,9 +33,9 @@ class _SearchPageState extends State<SearchPage> {
     try {
       List<dynamic> results = [];
       if (_filter == 'Film') {
-        // Film araması için kendi metodunuzu kullanabilirsiniz
+        results = await ApiService(apiKey: 'AIzaSyAZUdCH99178o1u6DyFH5yucWc5OjlNi1k').searchMovies(_searchQuery);
       } else if (_filter == 'Dizi') {
-        // Dizi araması için kendi metodunuzu kullanabilirsiniz
+        results = await ApiService(apiKey: 'AIzaSyAZUdCH99178o1u6DyFH5yucWc5OjlNi1k').searchTVShows(_searchQuery);
       } else if (_filter == 'Kullanıcı') {
         results = await _userService.searchUsers(_searchQuery); // Kullanıcı aramasını yaptık
       }
@@ -52,6 +53,7 @@ class _SearchPageState extends State<SearchPage> {
       });
     }
   }
+
 
   @override
   void dispose() {
