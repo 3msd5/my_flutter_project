@@ -34,6 +34,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
         // Firestore'a kullanıcı bilgilerini kaydet
         await _firestore.collection('users').doc(userCredential.user!.uid).set({
+          'uid': userCredential.user!.uid, // UID'yi burada ekliyoruz
           'name': _nameController.text.trim(),
           'email': _emailController.text.trim(),
           'phone': _phoneController.text.trim(),
@@ -42,7 +43,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
         // Kayıt başarılı olduğunda, kullanıcıyı anasayfaya yönlendir veya login sayfasına
         // Navigator.pushReplacementNamed(context, '/home');
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Kayıt başarılı')));
       } catch (e) {
         setState(() {
           _errorMessage = e.toString();
@@ -50,6 +51,7 @@ class _SignUpPageState extends State<SignUpPage> {
       }
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
