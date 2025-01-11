@@ -50,6 +50,22 @@ class AppTheme {
   static const Duration animationMedium = Duration(milliseconds: 300);
   static const Duration animationLong = Duration(milliseconds: 400);
 
+  static MaterialColor primarySwatch = MaterialColor(
+    primaryColor.value,
+    <int, Color>{
+      50: primaryColor.withOpacity(0.1),
+      100: primaryColor.withOpacity(0.2),
+      200: primaryColor.withOpacity(0.3),
+      300: primaryColor.withOpacity(0.4),
+      400: primaryColor.withOpacity(0.5),
+      500: primaryColor.withOpacity(0.6),
+      600: primaryColor.withOpacity(0.7),
+      700: primaryColor.withOpacity(0.8),
+      800: primaryColor.withOpacity(0.9),
+      900: primaryColor.withOpacity(1.0),
+    },
+  );
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
