@@ -6,7 +6,6 @@ import 'package:filmdeneme/services/api_service.dart';
 import 'package:filmdeneme/pages/profilePage.dart';
 import 'package:filmdeneme/pages/loginPage.dart';
 import 'package:filmdeneme/pages/DetailsPage.dart';
-import 'package:filmdeneme/services/api_test.dart';
 import 'package:filmdeneme/pages/SearchPage.dart';
 import 'package:filmdeneme/theme/app_theme.dart';
 import 'package:filmdeneme/widgets/movie_card.dart';
@@ -209,22 +208,34 @@ class _HomePageState extends State<HomePage> {
                 overview: item['overview'] ?? '',
                 movieId: item['id'],
                 isMovie: isMovieSelected,
-                onTap: () {
-                  Navigator.push(
+                releaseDate: isMovieSelected 
+                    ? item['release_date'] ?? 'Unknown'
+                    : item['first_air_date'] ?? 'Unknown',
+                onTap: () async {
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => DetailsPage(
                         movieId: item['id'],
                         title: item['name'] ?? item['title'],
-                        overview: item['overview'],
+                        overview: item['overview'] ?? 'No overview available',
                         posterPath: item['poster_path'] ?? '',
-                        releaseDate: item['release_date'] ?? 'Unknown',
-                        director: item['director'] ?? 'Unknown',
-                        actors: List<String>.from(item['actors'] ?? []),
+                        releaseDate: isMovieSelected 
+                            ? (item['release_date'] ?? 'Unknown')
+                            : (item['first_air_date'] ?? 'Unknown'),
+                        director: 'Unknown',
+                        actors: [],
                         isMovie: isMovieSelected,
                       ),
                     ),
                   );
+                  
+                  // Refresh the current list when returning from details page
+                  _fetchInitialData();
+                },
+                onListUpdated: () {
+                  // Refresh the current list when favorites/watchlist is updated
+                  _fetchInitialData();
                 },
               );
             },
@@ -254,15 +265,6 @@ class _HomePageState extends State<HomePage> {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.api),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ApiTestWidget()),
-              );
-            },
-          ),
         ],
       ),
       drawer: Drawer(
@@ -272,12 +274,11 @@ class _HomePageState extends State<HomePage> {
             UserAccountsDrawerHeader(
               accountName: Text(
                 currentUser != null
-                    ? "Welcome \n${_getUserFullName()}"
+                    ? _getUserFullName()
                     : 'Welcome! Please login.',
                 style: const TextStyle(fontSize: 16),
               ),
               accountEmail: null,
-
               currentAccountPicture: CircleAvatar(
                 backgroundColor: Colors.white,
                 backgroundImage: currentUser != null && currentUser!.photoURL != null
@@ -288,20 +289,31 @@ class _HomePageState extends State<HomePage> {
                     : null,
               ),
             ),
-
-            ListTile(
-              leading: const Icon(Icons.person_outline),
-              title: Text(currentUser != null ? 'My Profile' : 'Sign In'),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => currentUser != null ? ProfilePage() : LoginPage(),
-                  ),
-                );
-              },
-            ),
             if (currentUser != null) ...[
+              ListTile(
+                leading: const Icon(Icons.home_outlined),
+                title: const Text('Home'),
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const HomePage(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.person_outline),
+                title: const Text('My Profile'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ProfilePage(),
+                    ),
+                  );
+                },
+              ),
               ListTile(
                 leading: const Icon(Icons.favorite_border),
                 title: const Text('My Favorites'),
@@ -326,9 +338,7 @@ class _HomePageState extends State<HomePage> {
                   );
                 },
               ),
-            ],
-            if (currentUser != null) ...[
-              Divider(),
+              const Divider(),
               ListTile(
                 leading: const Icon(Icons.logout),
                 title: const Text('Logout'),
@@ -336,9 +346,8 @@ class _HomePageState extends State<HomePage> {
                   try {
                     await FirebaseAuth.instance.signOut();
                     if (context.mounted) {
-                      // Clear navigation stack and go to login page
                       Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (context) => LoginPage()),
+                        MaterialPageRoute(builder: (context) => const LoginPage()),
                         (route) => false,
                       );
                     }

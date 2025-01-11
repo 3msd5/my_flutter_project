@@ -72,7 +72,7 @@ class UserService {
       return AppUser.fromMap(doc.data()!);
     } catch (e) {
       print('Error getting current user: $e');
-      return null;
+      throw e;
     }
   }
 
@@ -90,21 +90,19 @@ class UserService {
   }
 
   // Update user profile
-  Future<void> updateUserProfile(String uid, {
+  Future<void> updateUserProfile({
     required String name,
-    String? phone,
+    required String phone,
   }) async {
     try {
-      final updates = <String, dynamic>{
-        'name': name.trim(),
-        'name_lower': name.trim().toLowerCase(),
-      };
-      
-      if (phone != null) {
-        updates['phone'] = phone.trim();
-      }
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('No user logged in');
 
-      await _firestore.collection('users').doc(uid).update(updates);
+      await _firestore.collection('users').doc(user.uid).update({
+        'name': name,
+        'name_lower': name.toLowerCase(),
+        'phone': phone,
+      });
     } catch (e) {
       print('Error updating user profile: $e');
       throw e;

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/UserService.dart';
 import '../models/user.dart';
 import '../theme/app_theme.dart';
 
 class SignUpPage extends StatefulWidget {
+  const SignUpPage({Key? key}) : super(key: key);
+
   @override
   _SignUpPageState createState() => _SignUpPageState();
 }
@@ -20,7 +24,7 @@ class _SignUpPageState extends State<SignUpPage> {
   final _phoneController = TextEditingController();
   
   bool _isLoading = false;
-  String _errorMessage = '';
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -32,268 +36,302 @@ class _SignUpPageState extends State<SignUpPage> {
     super.dispose();
   }
 
+  String? _validateUsername(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter a username';
+    }
+    if (value.length < 3) {
+      return 'Username must be at least 3 characters';
+    }
+    if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value)) {
+      return 'Username can only contain letters, numbers, and underscores';
+    }
+    return null;
+  }
+
+  String? _validatePhone(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter a phone number';
+    }
+    // Remove any spaces or special characters for validation
+    String cleanPhone = value.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleanPhone.length != 10) {
+      return 'Phone number must be 10 digits';
+    }
+    return null;
+  }
+
   Future<void> _signUp() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = '';
-    });
+    setState(() => _isLoading = true);
 
     try {
-      // Check username availability first
-      final isAvailable = await _userService.isUsernameAvailable(_usernameController.text.trim());
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(
+            color: AppTheme.primaryColor,
+          ),
+        ),
+      );
+
+      // Check username availability
+      final isAvailable = await _userService.isUsernameAvailable(_usernameController.text);
       if (!isAvailable) {
-        setState(() {
-          _errorMessage = 'Username is already taken';
-          _isLoading = false;
-        });
+        Navigator.pop(context); // Dismiss loading dialog
+        setState(() => _isLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Username is already taken'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
         return;
       }
 
-      // Create Firebase Auth user
+      // Create user account
       final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
-      // Create AppUser and save to Firestore
+      // Format phone number to standard format
+      String formattedPhone = _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
+      formattedPhone = '(${formattedPhone.substring(0, 3)}) ${formattedPhone.substring(3, 6)}-${formattedPhone.substring(6)}';
+
+      // Create user document
       final user = AppUser(
         uid: userCredential.user!.uid,
+        username: _usernameController.text,
+        name: _nameController.text,
         email: _emailController.text.trim(),
-        username: _usernameController.text.trim(),
-        name: _nameController.text.trim(),
-        phone: _phoneController.text.trim(),
+        phone: formattedPhone,
         createdAt: DateTime.now(),
       );
-
+      
       await _userService.createUser(user);
 
-      // No need to navigate manually, the StreamBuilder in main.dart will handle it
-      // Just show a success message
       if (mounted) {
+        Navigator.pop(context); // Dismiss loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Account created successfully')),
+          const SnackBar(
+            content: Text('Account created successfully!'),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     } on FirebaseAuthException catch (e) {
-      String errorMessage;
+      Navigator.pop(context); // Dismiss loading dialog
+      String message = 'An error occurred';
+      
       switch (e.code) {
         case 'email-already-in-use':
-          errorMessage = 'This email is already registered';
-          break;
-        case 'invalid-email':
-          errorMessage = 'Please enter a valid email address';
-          break;
-        case 'operation-not-allowed':
-          errorMessage = 'Email/password accounts are not enabled';
+          message = 'This email is already registered';
           break;
         case 'weak-password':
-          errorMessage = 'Please choose a stronger password';
+          message = 'Password is too weak';
+          break;
+        case 'invalid-email':
+          message = 'Invalid email address';
           break;
         default:
-          errorMessage = e.message ?? 'An error occurred during sign up';
+          message = e.message ?? 'An error occurred';
       }
-      setState(() => _errorMessage = errorMessage);
-    } catch (e) {
-      setState(() => _errorMessage = 'An unexpected error occurred');
-      print('Error during sign up: $e');
-    } finally {
+      
       if (mounted) {
-        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
+    } catch (e) {
+      Navigator.pop(context); // Dismiss loading dialog
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Create Account'),
-        elevation: 0,
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(24.0),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'Join MovieScout',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                const SizedBox(height: 40),
+                // App Logo or Title
+                const Icon(
+                  Icons.movie_outlined,
+                  size: 64,
+                  color: AppTheme.primaryColor,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Create Account',
+                  style: TextStyle(
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryColor,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                SizedBox(height: 32),
-
+                const SizedBox(height: 8),
+                Text(
+                  'Join MovieScout today',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 40),
                 // Username field
                 TextFormField(
                   controller: _usernameController,
                   decoration: InputDecoration(
                     labelText: 'Username',
-                    hintText: 'Choose a unique username',
-                    prefixIcon: Icon(Icons.person_outline),
+                    prefixIcon: const Icon(Icons.person_outline),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a username';
-                    }
-                    if (value.length < 3) {
-                      return 'Username must be at least 3 characters';
-                    }
-                    if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value)) {
-                      return 'Username can only contain letters, numbers, and underscores';
-                    }
-                    return null;
-                  },
+                  validator: _validateUsername,
                   textInputAction: TextInputAction.next,
                 ),
-                SizedBox(height: 16),
-
+                const SizedBox(height: 16),
                 // Full Name field
                 TextFormField(
                   controller: _nameController,
                   decoration: InputDecoration(
                     labelText: 'Full Name',
-                    hintText: 'Enter your full name',
-                    prefixIcon: Icon(Icons.person),
+                    prefixIcon: const Icon(Icons.badge_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your name';
-                    }
-                    return null;
-                  },
+                  validator: (value) => value?.isEmpty ?? true ? 'Please enter your name' : null,
                   textInputAction: TextInputAction.next,
                 ),
-                SizedBox(height: 16),
-
+                const SizedBox(height: 16),
                 // Email field
                 TextFormField(
                   controller: _emailController,
                   decoration: InputDecoration(
                     labelText: 'Email',
-                    hintText: 'Enter your email',
-                    prefixIcon: Icon(Icons.email),
+                    prefixIcon: const Icon(Icons.email_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
+                    if (value?.isEmpty ?? true) {
+                      return 'Please enter an email';
                     }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value!)) {
                       return 'Please enter a valid email';
                     }
                     return null;
                   },
                   textInputAction: TextInputAction.next,
                 ),
-                SizedBox(height: 16),
-
+                const SizedBox(height: 16),
                 // Password field
                 TextFormField(
                   controller: _passwordController,
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    hintText: 'Create a password',
-                    prefixIcon: Icon(Icons.lock),
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                      ),
+                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  obscureText: true,
+                  obscureText: _obscurePassword,
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value?.isEmpty ?? true) {
                       return 'Please enter a password';
                     }
-                    if (value.length < 6) {
+                    if (value!.length < 6) {
                       return 'Password must be at least 6 characters';
                     }
                     return null;
                   },
                   textInputAction: TextInputAction.next,
                 ),
-                SizedBox(height: 16),
-
+                const SizedBox(height: 16),
                 // Phone field
                 TextFormField(
                   controller: _phoneController,
                   decoration: InputDecoration(
                     labelText: 'Phone Number',
-                    hintText: 'Enter your phone number',
-                    prefixIcon: Icon(Icons.phone),
+                    prefixIcon: const Icon(Icons.phone_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
+                    hintText: '(555) 123-4567',
                   ),
                   keyboardType: TextInputType.phone,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your phone number';
-                    }
-                    return null;
-                  },
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
+                  validator: _validatePhone,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _signUp(),
                 ),
-                SizedBox(height: 24),
-
-                // Error message
-                if (_errorMessage.isNotEmpty)
-                  Container(
-                    padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      _errorMessage,
-                      style: TextStyle(color: Colors.red),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                SizedBox(height: 24),
-
+                const SizedBox(height: 24),
                 // Sign Up button
                 ElevatedButton(
                   onPressed: _isLoading ? null : _signUp,
                   style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: _isLoading
-                      ? SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          'Create Account',
-                          style: TextStyle(fontSize: 16),
-                        ),
+                  child: Text(
+                    _isLoading ? 'Creating Account...' : 'Create Account',
+                    style: const TextStyle(fontSize: 16),
+                  ),
                 ),
-                SizedBox(height: 16),
-
+                const SizedBox(height: 16),
                 // Login link
-                TextButton(
-                  onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
-                  child: Text('Already have an account? Login'),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Already have an account?'),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Login'),
+                    ),
+                  ],
                 ),
               ],
             ),

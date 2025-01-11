@@ -17,8 +17,8 @@ class AppUser {
     required this.email,
     this.phone,
     required this.createdAt,
-  }) : username_lower = username.toLowerCase(),
-       name_lower = name.toLowerCase();
+  })  : username_lower = username.toLowerCase(),
+        name_lower = name.toLowerCase();
 
   Map<String, dynamic> toMap() {
     return {
@@ -29,20 +29,18 @@ class AppUser {
       'name_lower': name_lower,
       'email': email,
       'phone': phone,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'createdAt': createdAt,
     };
   }
 
   factory AppUser.fromMap(Map<String, dynamic> map) {
     return AppUser(
-      uid: map['uid'] ?? '',
-      username: map['username'] ?? '',
-      name: map['name'] ?? '',
-      email: map['email'] ?? '',
-      phone: map['phone'],
-      createdAt: map['createdAt'] is Timestamp 
-          ? (map['createdAt'] as Timestamp).toDate()
-          : DateTime.now(),
+      uid: map['uid'] as String,
+      username: map['username'] as String,
+      name: map['name'] as String,
+      email: map['email'] as String,
+      phone: map['phone'] as String?,
+      createdAt: (map['createdAt'] as Timestamp).toDate(),
     );
   }
 

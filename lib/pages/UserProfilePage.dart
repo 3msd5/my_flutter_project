@@ -1,221 +1,281 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:filmdeneme/theme/app_theme.dart';
+import 'package:filmdeneme/pages/DetailsPage.dart';
 
 class UserProfilePage extends StatelessWidget {
   final String userId;
 
-  UserProfilePage({required this.userId});
+  const UserProfilePage({Key? key, required this.userId}) : super(key: key);
 
-  // Firestore'dan, belirtilen koleksiyonu çekmek için kullanılan metod
   Future<List<DocumentSnapshot>> _getMoviesFromCollection(String collectionName) async {
     final querySnapshot = await FirebaseFirestore.instance
         .collection('users')
         .doc(userId)
         .collection(collectionName)
         .get();
-
-    return querySnapshot.docs;  // Dokümanları döndürüyoruz
+    return querySnapshot.docs;
   }
 
-  // Kullanıcı bilgilerini almak için kullanılan metod
   Future<DocumentSnapshot> _getUserData() async {
-    final userDoc = await FirebaseFirestore.instance
+    return await FirebaseFirestore.instance
         .collection('users')
         .doc(userId)
         .get();
+  }
 
-    return userDoc;  // Kullanıcı bilgilerini döndürüyoruz
+  Widget _buildMovieCard(Map<String, dynamic> movie, BuildContext context) {
+    final posterPath = movie['posterPath'];
+    final posterUrl = posterPath != null
+        ? 'https://image.tmdb.org/t/p/w500$posterPath'
+        : null;
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DetailsPage(
+              movieId: movie['id'],
+              title: movie['title'] ?? 'Unknown',
+              overview: movie['overview'] ?? 'No overview available',
+              posterPath: movie['posterPath'] ?? '',
+              releaseDate: movie['releaseDate'] ?? 'Unknown',
+              director: movie['director'] ?? 'Unknown',
+              actors: List<String>.from(movie['actors'] ?? []),
+              isMovie: movie['isMovie'] ?? true,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        width: 120,
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: posterUrl != null
+                  ? Image.network(
+                      posterUrl,
+                      height: 180,
+                      width: 120,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          Container(
+                            height: 180,
+                            width: 120,
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.movie, size: 50, color: Colors.grey),
+                          ),
+                    )
+                  : Container(
+                      height: 180,
+                      width: 120,
+                      color: Colors.grey[300],
+                      child: const Icon(Icons.movie, size: 50, color: Colors.grey),
+                    ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              movie['title'] ?? 'No title',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSection(String title, List<DocumentSnapshot> movies, BuildContext context) {
+    if (movies.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  'No $title yet',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 230,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: movies.length,
+              itemBuilder: (context, index) => _buildMovieCard(
+                movies[index].data() as Map<String, dynamic>,
+                context,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('User Profile'),
-      ),
       body: FutureBuilder(
         future: Future.wait([
-          _getUserData(),  // Kullanıcı bilgilerini alıyoruz
-          _getMoviesFromCollection('favorites'),  // Favori filmleri alıyoruz
-          _getMoviesFromCollection('watchlist'),  // İzleme listelerini alıyoruz
+          _getUserData(),
+          _getMoviesFromCollection('favorites'),
+          _getMoviesFromCollection('watchlist'),
         ]),
         builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(
+                color: AppTheme.primaryColor,
+              ),
+            );
           }
 
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('User not found'));
+            return const Center(child: Text('User not found'));
           }
 
-          // Kullanıcı bilgilerini alıyoruz
           final userData = snapshot.data![0].data() as Map<String, dynamic>;
           final favoriteMovies = snapshot.data![1];
           final watchlistMovies = snapshot.data![2];
 
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Kullanıcı Bilgileri
-                Text(
-                  'Name and Surname: ${userData['name']}',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          return CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                expandedHeight: 200,
+                floating: false,
+                pinned: true,
+                flexibleSpace: FlexibleSpaceBar(
+                  title: Text(
+                    userData['name'] ?? 'User Profile',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  background: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppTheme.primaryColor,
+                          AppTheme.primaryColor.withOpacity(0.8),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-                Text(
-                  'Email: ${userData['email']}',
-                  style: TextStyle(fontSize: 16),
-                ),
-                Text(
-                  'Phone: ${userData['phone']}',
-                  style: TextStyle(fontSize: 16),
-                ),
-                SizedBox(height: 24),  // Kullanıcı bilgileri bitiminden sonra biraz boşluk
-
-                // Favoriler kısmı
-                Text(
-                  'Favorites:',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(
-                  height: 250,  // Posterler için daha fazla alan
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: favoriteMovies.length,
-                    itemBuilder: (context, index) {
-                      // Favori film bilgilerini alıyoruz
-                      final movie = favoriteMovies[index].data() as Map<String, dynamic>;
-                      final posterPath = movie['posterPath'];  // Film poster URL'sini alıyoruz
-                      final posterUrl = posterPath != null
-                          ? 'https://image.tmdb.org/t/p/w500$posterPath'
-                          : null;  // Poster URL'sini oluşturuyoruz
-
-                      return Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Card(
-                          elevation: 5,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Poster görüntüleme
-                              posterUrl != null
-                                  ? ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  posterUrl,
-                                  height: 150,  // Poster yüksekliği
-                                  width: 100,   // Poster genişliği
-                                  fit: BoxFit.cover,
-                                ),
-                              )
-                                  : Icon(Icons.image, size: 100),  // Poster yoksa yedek ikon göster
-
-                              // Alt şerit
-                              Container(
-                                width: 100,
-                                height: 40,  // Alt şerit yüksekliği
-                                decoration: BoxDecoration(
-                                  color: Colors.white24.withOpacity(0.7),
-                                  borderRadius: BorderRadius.only(
-                                    bottomLeft: Radius.circular(8),
-                                    bottomRight: Radius.circular(8),
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    movie['title'] ?? 'No title',
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 14,  // Daha büyük font boyutu
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 30,
+                                    backgroundColor: AppTheme.primaryColor,
+                                    child: Text(
+                                      (userData['name'] as String).isNotEmpty
+                                          ? userData['name'][0].toUpperCase()
+                                          : '?',
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '@${userData['username'] ?? ''}',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          userData['email'] ?? '',
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
                         ),
-                      );
-                    },
+                      ),
+                      _buildSection('Favorites', favoriteMovies, context),
+                      _buildSection('Watchlist', watchlistMovies, context),
+                    ],
                   ),
                 ),
-
-                SizedBox(height: 16),
-
-                // İzleme Listesi kısmı
-                Text(
-                  'Watchlist:',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(
-                  height: 250,  // Posterler için daha fazla alan
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: watchlistMovies.length,
-                    itemBuilder: (context, index) {
-                      // İzleme listesi film bilgilerini alıyoruz
-                      final movie = watchlistMovies[index].data() as Map<String, dynamic>;
-                      final posterPath = movie['posterPath'];  // Film poster URL'sini alıyoruz
-                      final posterUrl = posterPath != null
-                          ? 'https://image.tmdb.org/t/p/w500$posterPath'
-                          : null;  // Poster URL'sini oluşturuyoruz
-
-                      return Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Card(
-                          elevation: 5,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Column(
-                            children: [
-                              // Poster görüntüleme
-                              posterUrl != null
-                                  ? ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  posterUrl,
-                                  height: 150,  // Poster yüksekliği
-                                  width: 100,   // Poster genişliği
-                                  fit: BoxFit.cover,
-                                ),
-                              )
-                                  : Icon(Icons.image, size: 100),  // Poster yoksa yedek ikon göster
-
-                              // Alt şerit
-                              Container(
-                                width: 100,
-                                height: 40,  // Alt şerit yüksekliği
-                                decoration: BoxDecoration(
-                                  color: Colors.white24.withOpacity(0.7),
-                                  borderRadius: BorderRadius.only(
-                                    bottomLeft: Radius.circular(8),
-                                    bottomRight: Radius.circular(8),
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    movie['title'] ?? 'No title',
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 14,  // Daha büyük font boyutu
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           );
         },
       ),

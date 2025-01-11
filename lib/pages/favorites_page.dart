@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_lists.dart';
 import '../widgets/movie_card.dart';
+import '../theme/app_theme.dart';
 import 'DetailsPage.dart';
 
 class FavoritesPage extends StatefulWidget {
@@ -54,6 +55,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
           SnackBar(
             content: Text('Error loading favorites: ${e.toString()}'),
             backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -62,6 +64,11 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
   Future<void> _removeFromFavorites(UserMovie movie) async {
     if (currentUser == null) return;
+
+    // Remove from local state immediately
+    setState(() {
+      favorites.removeWhere((item) => item.id == movie.id);
+    });
 
     try {
       await _firestore
@@ -76,23 +83,27 @@ class _FavoritesPageState extends State<FavoritesPage> {
         }
       });
 
-      setState(() {
-        favorites.removeWhere((item) => item.id == movie.id);
-      });
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Removed from favorites'),
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
     } catch (e) {
+      // Revert local state if operation failed
+      setState(() {
+        favorites.add(movie);
+      });
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error removing from favorites: ${e.toString()}'),
             backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -106,10 +117,31 @@ class _FavoritesPageState extends State<FavoritesPage> {
         title: const Text('My Favorites'),
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(
+                color: AppTheme.primaryColor,
+              ),
+            )
           : favorites.isEmpty
-              ? const Center(
-                  child: Text('No favorites added yet'),
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(
+                        Icons.favorite_border_rounded,
+                        size: 48,
+                        color: Colors.grey,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'No favorites added yet',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
                 )
               : ListView.builder(
                   padding: const EdgeInsets.all(8),
@@ -120,12 +152,31 @@ class _FavoritesPageState extends State<FavoritesPage> {
                       key: Key(movie.id.toString()),
                       direction: DismissDirection.endToStart,
                       background: Container(
-                        color: Colors.red,
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade400,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(right: 20),
-                        child: const Icon(
-                          Icons.delete,
-                          color: Colors.white,
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.delete_outline,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Remove',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       onDismissed: (direction) {
@@ -138,6 +189,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                         overview: movie.overview,
                         movieId: movie.id,
                         isMovie: movie.isMovie,
+                        releaseDate: movie.releaseDate,
                         onTap: () {
                           Navigator.push(
                             context,
@@ -154,6 +206,10 @@ class _FavoritesPageState extends State<FavoritesPage> {
                               ),
                             ),
                           );
+                        },
+                        onListUpdated: () {
+                          // Refresh the favorites when the movie card's state changes
+                          _loadFavorites();
                         },
                       ),
                     );

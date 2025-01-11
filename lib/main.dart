@@ -23,24 +23,39 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'MovieScout',
       theme: AppTheme.lightTheme,
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(),
+      debugShowCheckedModeBanner: false,
+      routes: {
+        '/': (context) => _handleAuth(),
+        '/home': (context) => HomePage(),
+        '/login': (context) => LoginPage(),
+        '/signup': (context) => SignUpPage(),
+        '/profile': (context) => ProfilePage(),
+        '/search': (context) => SearchPage(),
+      },
+      initialRoute: '/',
+    );
+  }
+
+  Widget _handleAuth() {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(
+                color: AppTheme.primaryColor,
               ),
-            );
-          }
+            ),
+          );
+        }
 
-          if (snapshot.hasData) {
-            return HomePage();
-          }
+        if (snapshot.hasData) {
+          return HomePage();
+        }
 
-          return LoginPage();
-        },
-      ),
+        return LoginPage();
+      },
     );
   }
 }

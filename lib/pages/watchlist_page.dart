@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_lists.dart';
 import '../widgets/movie_card.dart';
+import '../theme/app_theme.dart';
 import 'DetailsPage.dart';
 
 class WatchlistPage extends StatefulWidget {
@@ -63,6 +64,11 @@ class _WatchlistPageState extends State<WatchlistPage> {
   Future<void> _removeFromWatchlist(UserMovie movie) async {
     if (currentUser == null) return;
 
+    // Remove from local state immediately
+    setState(() {
+      watchlist.removeWhere((item) => item.id == movie.id);
+    });
+
     try {
       await _firestore
           .collection('users')
@@ -76,23 +82,27 @@ class _WatchlistPageState extends State<WatchlistPage> {
         }
       });
 
-      setState(() {
-        watchlist.removeWhere((item) => item.id == movie.id);
-      });
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Removed from watchlist'),
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
     } catch (e) {
+      // Revert local state if operation failed
+      setState(() {
+        watchlist.add(movie);
+      });
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error removing from watchlist: ${e.toString()}'),
             backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -117,6 +127,8 @@ class _WatchlistPageState extends State<WatchlistPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Moved to favorites'),
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -126,6 +138,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
           SnackBar(
             content: Text('Error moving to favorites: ${e.toString()}'),
             backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -139,10 +152,40 @@ class _WatchlistPageState extends State<WatchlistPage> {
         title: const Text('My Watchlist'),
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(
+                color: AppTheme.primaryColor,
+              ),
+            )
           : watchlist.isEmpty
-              ? const Center(
-                  child: Text('No items in watchlist'),
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.bookmark_border,
+                        size: 64,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Your watchlist is empty',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Movies you want to watch later will appear here',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ),
                 )
               : ListView.builder(
                   padding: const EdgeInsets.all(8),
@@ -153,57 +196,65 @@ class _WatchlistPageState extends State<WatchlistPage> {
                       key: Key(movie.id.toString()),
                       direction: DismissDirection.endToStart,
                       background: Container(
-                        color: Colors.red,
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade400,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(right: 20),
-                        child: const Icon(
-                          Icons.delete,
-                          color: Colors.white,
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.delete_outline,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Remove',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       onDismissed: (direction) {
                         _removeFromWatchlist(movie);
                       },
-                      child: Stack(
-                        children: [
-                          MovieCard(
-                            title: movie.title,
-                            posterPath: movie.posterPath ?? '',
-                            voteAverage: movie.voteAverage,
-                            overview: movie.overview,
-                            movieId: movie.id,
-                            isMovie: movie.isMovie,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => DetailsPage(
-                                    movieId: movie.id,
-                                    title: movie.title,
-                                    overview: movie.overview,
-                                    posterPath: movie.posterPath ?? '',
-                                    releaseDate: movie.releaseDate ?? 'Unknown',
-                                    director: 'Unknown',
-                                    actors: [],
-                                    isMovie: movie.isMovie,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: IconButton(
-                              icon: const Icon(
-                                Icons.favorite_border,
-                                color: Colors.white,
+                      child: MovieCard(
+                        title: movie.title,
+                        posterPath: movie.posterPath ?? '',
+                        voteAverage: movie.voteAverage,
+                        overview: movie.overview,
+                        movieId: movie.id,
+                        isMovie: movie.isMovie,
+                        releaseDate: movie.releaseDate,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => DetailsPage(
+                                movieId: movie.id,
+                                title: movie.title,
+                                overview: movie.overview,
+                                posterPath: movie.posterPath ?? '',
+                                releaseDate: movie.releaseDate ?? 'Unknown',
+                                director: 'Unknown',
+                                actors: [],
+                                isMovie: movie.isMovie,
                               ),
-                              onPressed: () => _moveToFavorites(movie),
-                              tooltip: 'Move to favorites',
                             ),
-                          ),
-                        ],
+                          );
+                        },
+                        onListUpdated: () {
+                          // Refresh the watchlist when the movie card's state changes
+                          _loadWatchlist();
+                        },
                       ),
                     );
                   },
