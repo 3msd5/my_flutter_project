@@ -366,6 +366,8 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
           indicatorColor: Colors.white,
           labelStyle: const TextStyle(fontWeight: FontWeight.bold),
           unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
+          labelColor: Colors.white, // Seçili tab yazısı rengi
+          unselectedLabelColor: Colors.white70, // Seçili olmayan tab yazısı rengi
           tabs: const [
             Tab(text: 'Movies'),
             Tab(text: 'TV Shows'),
@@ -388,6 +390,7 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
       ),
     );
   }
+
 }
 
 enum SearchType {

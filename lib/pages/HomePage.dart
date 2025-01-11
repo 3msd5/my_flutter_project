@@ -283,12 +283,13 @@ class _HomePageState extends State<HomePage> {
                 backgroundColor: Colors.white,
                 backgroundImage: currentUser != null && currentUser!.photoURL != null
                     ? NetworkImage(currentUser!.photoURL!)
-                    : null,
+                    : const AssetImage('assets/images/moviescoutlogo.png') as ImageProvider,
                 child: currentUser != null && currentUser!.photoURL == null
-                    ? const Icon(Icons.person, color: Colors.blue, size: 40)
+                    ? null
                     : null,
               ),
             ),
+
             if (currentUser != null) ...[
               ListTile(
                 leading: const Icon(Icons.home_outlined),

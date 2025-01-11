@@ -182,11 +182,12 @@ class _SignUpPageState extends State<SignUpPage> {
               children: [
                 const SizedBox(height: 40),
                 // App Logo or Title
-                const Icon(
-                  Icons.movie_outlined,
-                  size: 64,
-                  color: AppTheme.primaryColor,
+                Image.asset(
+                  'assets/images/moviescoutlogo.png',
+                  width: 64,  // İstediğiniz boyut
+                  height: 64, // İstediğiniz boyut
                 ),
+
                 const SizedBox(height: 16),
                 const Text(
                   'Create Account',
